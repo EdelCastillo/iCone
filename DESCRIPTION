@@ -1,0 +1,23 @@
+Package: iCone
+Type: Package
+Title: MSI Tools
+Version: 2.0
+Date: 2026-01-19
+Author: Esteban del Castillo
+Authors@R: c( person("Esteban", "del Castillo", email="esteban.delcastillo@urv.cat",
+        role=c("aut")))
+Maintainer: Esteban del Castillo<esteban.delcastillo@urv.cat>
+Description: MSI data handling 
+License: GPL3
+LazyData: TRUE
+SystemRequirements: C++11 
+Depends:
+    R (>= 3.6),
+    methods
+Imports:
+    digest (>= 0.6.9),
+    Rcpp (>= 0.12.2)
+LinkingTo: Rcpp
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
