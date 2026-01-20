@@ -23,7 +23,7 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
 ### **Step 1**.- A list with the necessary parameters is generated.
 
 > For **example**:  
->**params**\ <-list("massResolution"=30000, "minPixelsSupport"=5, "SNR"=3,  "SNRmethod"="estnoise_mad", "linkedPeaks"=3);
+>**params** <-list("massResolution"=30000, "minPixelsSupport"=5, "SNR"=3,  "SNRmethod"="estnoise_mad", "linkedPeaks"=3);
 
 **Description of the parameters:**
 
