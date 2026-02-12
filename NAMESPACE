@@ -2,6 +2,7 @@
 
 export(getAverageGaussianSpectrum)
 export(getAverageSpectrum)
+export(getGaussiansFromSpectrum)
 export(getPeakMatrix)
 export(getPixelGaussians)
 export(rPlotGaussianSpectrum)

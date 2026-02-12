@@ -241,7 +241,7 @@ getPixelGaussians<-function(data_file,
 }
 
 #' @name getAverageGaussianSpectrum
-#' @title It obtains the average value of the Gaussian of the desired spectra.
+#' @title It obtains the average value of the Gaussian from all data into .imzML file.
 #' @param data_file: absolute reference to the file with the imzML extension.
 #' @param params  
 #'      "massResolution": mass resolution with which the spectra were acquired (mz/deltaMz).
@@ -351,26 +351,26 @@ getAverageGaussianSpectrum<-function(data_file,
 }
 
 #' @name getAverageSpectrum
-#' @title It obtains the average value of the intensities of the desired spectra.
+#' @title It obtains the average value of the intensities from all data into .imzML file.
+#'        Noise is not taken into account.
 #' @param data_file: absolute reference to the file with the imzML extension.
-#' @param params  
-#'         "noiseMethod": method for estimating noise.
 #' @param lowMass:   lower mass to consider
 #' @param highMass:  higher mass to consider
 #' @param pxList:    list of pixels. First pixel=1. By default everyone.
+#' @param massResolution: mass resolution with which the spectra were acquired (mz/deltaMz).
 #' @param overSampling:  interval between points on the mass axis = massResolution/overSampling.
 #' @param imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
 #' @param fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 #'
 #' @return a list: averageMz and averageIntensity
-#'            averageMz: array of masses at intervals of 1/2 of the resolution
+#'            averageMz: array of masses at intervals of the resolution/overSampling
 #'     averageIntensity: array of average Gaussians values 
 #' @export
 getAverageSpectrum<-function(data_file,
-                             params,
                              lowMass=0,
                              highMass=0,
                              pxList=c(0),
+                             massResolution=30000,
                              overSampling=4,
                              imzMLChecksum = F, 
                              fixBrokenUUID = F)
@@ -380,36 +380,10 @@ getAverageSpectrum<-function(data_file,
     stop("File not found\n")
   }
   
-  #control de parámetros
-  if(!(exists("SNR", where=params)))
+  if(!(exists("params"))) #parameters not considered but must exist.
   {
-    #print("warning: by default, SNR parameter will be 1.")
-    params=c(params, "SNR"=1)
-  }
-  if(!(exists("minPixelsSupport", where=params)))
-  {
-    #print("warning: by default, minPixelsSupport parameter will be 1%.")
-    params=c(params, "minPixelsSupport"=1)
-  }
-  if(!(exists("noiseMethod", where=params)))
-  {
-    #print("warning: by default, noiseMethod will be MAD type.")
-    params=c(params, "noiseMethod"="estnoise_mad")
-  }
-  if(!(exists("linkedPeaks", where=params)))
-  {
-    #print("warning: by default, linkedPeaks parameter will be 3 sd.") 
-    params=c(params, "linkedPeaks"=3)
-  }
-  if(!(exists("massResolution", where=params)))
-  {
-    print("ERROR: massResolution parameter is required.") 
-    return (0)
-  }
-  if(params$massResolution<=0)
-  {
-    print("ERROR: massResolution must be greater than zero.") 
-    return (0)
+    params=list("SNR"=1, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "linkedPeaks"=3)
+    params=c(params, "massResolution"=massResolution)
   }
   
   imgData <- NULL
@@ -454,6 +428,52 @@ getAverageSpectrum<-function(data_file,
     return(avSp)
   }
   print("warning: imzML file type is required." )
+}
+
+#' @name getGaussiansFromSpectrum
+#' @title Form Gaussians over each peak of the given spectrum.
+#' @param Intensity:   vector with value associated with each mass point.
+#' @param mz:          vector with mass/charge information
+#' @param lowMass:     lower mass to consider
+#' @param highMass:    higher mass to consider
+#' @param SNR:         signal-to-noise ratio
+#' @param noiseMethod: method for estimating noise (estnoise_diff, estnoise_sd, estnoise_mad).
+#'
+#' @return List: gaussians, mass intensity, SNR, noise
+#'       gaussians: matrix with parameters for each Gaussian
+#'            mass: vector with the masses of the raw spectrum
+#'       intensity: intensity associated with each mass of the raw spectrum
+#'             SNR: signal-to-noise ratio associated with each mass of the raw spectrum.
+#'           noise: noise estimation
+#' @export
+getGaussiansFromSpectrum<-function(
+                              intensity,
+                              mz,
+                              lowMass=0,
+                              highMass=0,
+                              SNR=3,
+                              noiseMethod="estnoise_mad")
+{
+
+  #control de parámetros
+    params=list("SNR"=3, "noiseMethod"="estnoise_mad", "massResolution"=30000, "minPixelsSupport"=1, "linkedPeaks"=3)
+
+    params$SNR=SNR
+    params$noiseMethod=noiseMethod
+
+  pt<-proc.time()
+  
+    if(lowMass>highMass)
+    {
+      print("warning: the lower mass exceeds the upper mass")
+      lowMass=highMass
+    }
+    
+    Gauss=rGetGaussiansFromSpectrum(intensity, mz, params, lowMass, highMass);
+    
+    pt<-proc.time() - pt
+    display_processing_time(pt, "Data processing time")
+    return(Gauss)
 }
 
 

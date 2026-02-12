@@ -16,8 +16,8 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *********************************************************************************/
-#ifndef ONE_PIXEL
-#define ONE_PIXEL
+#ifndef GAUSSIANS_FROM_SPECTRUM
+#define GAUSSIANS_FROM_SPECTRUM
 
 #include <Rcpp.h>
 #include "peakInfo.h"
@@ -34,18 +34,19 @@
 using namespace Rcpp;
 using namespace std; 
 
-class OnePixel
+class GaussiansFromSpectrum
 {
 public:
   //Constructor
   //captures input information, allocates memory and initializes.
-  OnePixel(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, int pixel);
+  GaussiansFromSpectrum(Rcpp::NumericVector intensitiy, Rcpp::NumericVector mz, Rcpp::List params, float mzLow, float mzHigh);
   
   //destructor
   //free reserved memory
-  ~OnePixel();
+  ~GaussiansFromSpectrum();
   
-  //Loads the raw data from a file, separates the peaks, and establishes the Gaussian.
+  //rawToGaussians()
+  //separates the peaks, and establishes the Gaussian.
   //results in internal structure. 
   //return the number of Gaussians or -1 is KO
   int rawToGaussians();
@@ -58,15 +59,16 @@ public:
   //Returns the number of Gaussians or a value < 0 on failure.
   int getGaussians(SPECTRO *spectro_p, GAUSS_PARAMS *gaussians_p);
   
-  //Returns a list with information about a spectrum
+  // getGaussiansList()
   // gaussians: matrix with parameters for each Gaussian
   // mass: vector with the masses of the raw spectrum
   // intensity: intensity associated with each mass of the raw spectrum
   // SNR: signal-to-noise ratio associated with each mass of the raw spectrum.
-  // require of rGetPixelGaussians()
-  List getPixelGaussians(int px, float mzLow, float mzHigh);
+  // noise: noise estimation
+  // Returns a list with information about a spectrum
+  // requires of rawToGaussians() first
+  List getGaussiansList(float mzLow, float mzHigh);
   
-  int       m_NPixels;
   bool      m_exit;
     
 private:  
@@ -81,17 +83,14 @@ private:
       m_noise;
 
   //info generated in the class.
-  GetImzMLData  *m_getImzMLData_p;
   PEAK_F_GROUP  m_peakFG;
   GAUSS_SP      m_gaussians;
   
-  MASS_SEGMENT  m_massSegment;
   ION_ENTRY     **m_ionEntry_p;
   SPECTRO       m_spectro;
   bool          m_enable;
   int     
-              m_pixel,
-              m_SNRmethod;
+                m_SNRmethod;
   NoiseEstimation *m_noiseEst_p; 
   
 };

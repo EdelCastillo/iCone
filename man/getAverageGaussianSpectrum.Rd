@@ -2,7 +2,7 @@
 % Please edit documentation in R/rPeakMatrix.R
 \name{getAverageGaussianSpectrum}
 \alias{getAverageGaussianSpectrum}
-\title{It obtains the average value of the Gaussian of the desired spectra.}
+\title{It obtains the average value of the Gaussian from all data into .imzML file.}
 \usage{
 getAverageGaussianSpectrum(
   data_file,
@@ -43,5 +43,5 @@ averageMz: array of masses at intervals of 1/4 of the resolution
 averageIntensity: array of average Gaussians values
 }
 \description{
-It obtains the average value of the Gaussian of the desired spectra.
+It obtains the average value of the Gaussian from all data into .imzML file.
 }

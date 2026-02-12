@@ -23,7 +23,7 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
 ### **Step 1**.- A list with the necessary parameters is generated.
 
 > For **example**:  
->**params** <-list("massResolution"=30000, "minPixelsSupport"=5, "SNR"=3,  "SNRmethod"="estnoise_mad", "linkedPeaks"=3);
+>**params**\ <-list("massResolution"=30000, "minPixelsSupport"=5, "SNR"=3,  "SNRmethod"="estnoise_mad", "linkedPeaks"=3);
 
 **Description of the parameters:**
 
@@ -69,13 +69,16 @@ Reports information about a single spectrum.
 ```
 imzML_file_path: Absolute path to the filename with the imzML extension.
                  The attached binary file, with the ibd extension, must be in the same directory.
-         params: List of parameters given in Step 1.
+         params: List of parameters:
+                  "massResolution": mass resolution with which the spectra were acquired (mz/deltaMz).
+                             "SNR": signal-to-noise ratio
+                     "noiseMethod": method for estimating noise (estnoise_diff, estnoise_sd, estnoise_mad).
        initMass: Initial mass to consider.
       finalMass: Final   mass to consider.
           pixel: Reference to the spectrum (the first one is 1)
           
   return a list: 
-      gaussians: Matrix with the Gaussian spectra.
+      gaussians: Matrix with the Gaussian spectra (mass, sigma, intensity).
            mass: Vector with raw masses.
       intensity: Vector with raw intensities.
             SNR: Vector with signal-to-noise ratio for each mass point.
@@ -84,7 +87,7 @@ imzML_file_path: Absolute path to the filename with the imzML extension.
 
 > lst <-**getAverageGaussianSpectrum**(imzML_file_path, params, initMass, finalMass, pxList, overSampling, nThreads)
 
-Report the average of all conformal Gaussians in the indicated spectra.
+Report the average value of the Gaussian from all data into .imzML file.
 
 **Description of the parameters:**   
 ```
@@ -93,36 +96,59 @@ imzML_file_path: Absolute path to the filename with the imzML extension.
          params: List of parameters.
             "massResolution": mass resolution (mz/deltaMz).
                        "SNR": signal-to-noise ratio
-               "noiseMethod": method for estimating noise.
+               "noiseMethod": method for estimating noise (estnoise_diff, estnoise_sd, estnoise_mad).
        initMass: Initial mass to consider.
       finalMass: Final   mass to consider.
          pxList: list of pixels. First pixel=1. By default everyone.
    overSampling: interval between points on the mass axis = massResolution/overSampling.
-          
+       nThreads: number of threads
+       
   return a list: 
        averageMz: Vector with mass axis. A mass bin is 1/4 of the massResolution parameter
 averageIntensity: Vector with intensity axis.
 ```
 
-> lst <-**getAverageSpectrum**(imzML_file_path, params, initMass, finalMass, pxList, overSampling)
+> lst <-**getAverageSpectrum**(imzML_file_path, initMass, finalMass, pxList, massResolution, overSampling)
 
-Report the average of all intensities in the indicated spectra.
+Report the average value of the intensities from all data into .imzML file.
+Noise is not taken into account.
 
 **Description of the parameters:**   
 ```
 imzML_file_path: Absolute path to the filename with the imzML extension.
                  The attached binary file, with the ibd extension, must be in the same directory.
-         params: 
-          "massResolution": mass resolution (mz/deltaMz).
        initMass: Initial mass to consider.
       finalMass: Final   mass to consider.
          pxList: list of pixels. First pixel=1. By default everyone.
+ massResolution: mass resolution (mz/deltaMz).
    overSampling: interval between points on the mass axis = massResolution/overSampling.
           
   return a list: 
        averageMz: Vector with mass axis. A mass bin is 1/2 of the massResolution parameter
 averageIntensity: Vector with intensity axis.
 ```
+
+> lst <-**getGaussiansFromSpectrum**(intensity, mass, initMass, finalMass, SNR, noiseMethod)
+
+Report Gaussians over each peak of the given spectrum.
+
+**Description of the parameters:**   
+```
+   Intensity: vector with value associated with each mass point.
+        mass: vector with mass/charge information
+     lowMass: lower mass to consider
+    highMass: higher mass to consider
+         SNR: signal-to-noise ratio
+ noiseMethod: method for estimating noise (estnoise_diff, estnoise_sd, estnoise_mad).
+
+return List: gaussians, mass intensity, SNR, noise
+       gaussians: matrix with parameters for each Gaussian (mass, sigma, intensity)
+            mass: vector with the masses of the raw spectrum
+       intensity: intensity associated with each mass of the raw spectrum
+             SNR: signal-to-noise ratio associated with each mass of the raw spectrum.
+           noise: noise estimation
+```
+
 ### **functions for data visualization.**
 
 > **rPlotSpectrum**(values, initMass, finalMass)
@@ -138,7 +164,7 @@ View the information returned by the getAverageGaussianSpectrum() and getAverage
 
 > **rPlotGaussianSpectrum**(drawInfo, initMass, finalMass)
 
-View the information returned by the getPixelGaussians() function.
+View the information returned by the getPixelGaussians() and getGaussiansFromSpectrum() function.
 
 **Description of the parameters:**   
 ```

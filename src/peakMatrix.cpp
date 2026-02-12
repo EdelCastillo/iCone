@@ -142,14 +142,13 @@ List rGetAverageGaussianSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::L
    //'  
    //'  @param ibdFname:  absolute reference to the file with the ibd extension.
    //'  @param imzML:     list with information extracted from the imzML file with import_imzML()
-   //'  @param params:    specific parameters
-   //'   "massResolution": mass resolution with which the spectra were acquired.
+   //'  @param params:    specific parameters not considered but must exist.
    //'  @param mzLow:        lower  mass  to consider
    //'  @param mzHigh:       higher mass  to consider
    //'  @param pxList:       list of pixels. First pixel=1. By default everyone.
    //'  @param overSampling: interval between points on the mass axis = massResolution/overSampling.
    //'  @return lista: averageMz and averageIntensity
-   //'     averageMz: array of masses at intervals of 1/2 of the resolution
+   //'     averageMz: array of masses at intervals of mass resolution/overSampling
    //'     averageIntensity: array of average values with all Gaussians 
    //'     
    // [[Rcpp::export]]
@@ -157,7 +156,7 @@ List rGetAverageGaussianSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::L
    {
      PeakMatrix pMatrix(ibdFname, imzML, params, pxList, mzLow, mzHigh, 1);  
      if(pMatrix.m_hit==false) return 0;
-     
+
      List ret=pMatrix.getMeanSpectrum(pMatrix.m_massResolution, (int)overSampling);
      return ret;
    }
@@ -240,7 +239,7 @@ PeakMatrix::PeakMatrix(const char* ibdFname, Rcpp::List imzML, Rcpp::List params
     m_x[i]=X[px];
     m_y[i]=Y[px];
   }
-  
+
   nv=params["SNR"];
   m_SNR=nv[0];
   if(m_SNR<=0) m_SNR=1;
@@ -351,6 +350,7 @@ PeakMatrix::PeakMatrix(const char* ibdFname, Rcpp::List imzML, Rcpp::List params
 
 //  fp=fopen("kk.txt", "w");
 }
+
 
 //destructor
 //free reserved memory
@@ -1246,6 +1246,7 @@ List PeakMatrix::getMeanGaussianSpectrum(float resolution, int overSampling)
     for(int i=0; i<massAxisSize; i++) meanMassAxis_p[i]=0.0;
     
     double deltaMass2, gMean, gSigma, gIntensity, mz, den;
+    double middle=deltaMass/2.0;
     
     //for all elements of the spectrum
     for(int px=0; px<m_NPixels; px++)
@@ -1266,9 +1267,9 @@ List PeakMatrix::getMeanGaussianSpectrum(float resolution, int overSampling)
         iLow =(lowMass -m_mzLow)/deltaMass;
         iHigh=(highMass-m_mzLow)/deltaMass;
         den=2*gSigma*gSigma;
-        for(int j=iLow; j<=iHigh; j++) 
+        for(int j=iLow; j<iHigh; j++) 
         {
-          mz=j*deltaMass+m_mzLow;
+          mz=j*deltaMass+m_mzLow+middle;
           meanMassAxis_p[j]+=gIntensity*exp(-(mz-gMean)*(mz-gMean)/den);
         }
       }
@@ -1287,53 +1288,90 @@ List PeakMatrix::getMeanGaussianSpectrum(float resolution, int overSampling)
   }
 
 //Obtains the average values of the intensities on an artificial mass axis.
+//Noise is not taken into account.
 //The mass axis is formed from the extreme masses to be considered and the desired resolution and overSampling.
+//delta_mass=mzLow/(overSamplig*massResolution) where massResolution=mz/deltaMz
 //Returns a list with two arrays: averageMz and averageIntensity.
 List PeakMatrix::getMeanSpectrum(float resolution, int overSampling)
 {
   double highMass, lowMass;
-  int iLow, iHigh, px;
+  int iLow, iHigh, px, massSize;
   Common tools;
+  float *meanMassAxis_p=0;
+  
+  if(overSampling==1 && m_NPixels==1)
+  {
+    int massSize=m_getImzMLData_p->getPixelMassF(m_pxList[px], m_spectro[0].tmpMass_p);//mass vector
+    if(massSize<=0) return 0;
+    
+    //raw info of intensities  
+    m_getImzMLData_p->getPixelIntensityF(m_pxList[px], m_spectro[0].tmpInt_p);
+    
+    NumericVector meanMz(massSize), meanInt(massSize);
+    for(int i=0; i<massSize; i++)
+    {
+      meanMz[i] =m_spectro[0].tmpMass_p[i];  //mass into bin
+      meanInt[i]=m_spectro[0].tmpInt_p[i];//intensity into bin
+    }
+    
+    List ret=List::create(Named("averageMz")=meanMz, Named("averageIntensity")=meanInt);
+    return ret;
+  }
   
   if(resolution>m_massResolution) resolution=m_massResolution;
   
-  double deltaMass=(double)m_mzLow/(overSampling*resolution); //delta=1/4 of the minimum mass increment of the spectrometer
+  double deltaMass=(double)m_mzLow/(overSampling*resolution); 
   int massAxisSize=1+(m_mzHigh-m_mzLow)/deltaMass;
   
-  float *meanMassAxis_p=0;
   meanMassAxis_p= new float[massAxisSize];
 
   int pxCount=0;
   for(int i=0; i<massAxisSize; i++) 
     {meanMassAxis_p[i]=0.0;}
   
-  int idx;
-
+  int idx0, idx1;
+  double slope, newValue, I1, I0, M1, M0;
+  double delta2, middle=deltaMass/2.0;
+  
   //for all elements of the spectrum
   for(int px=0; px<m_NPixels; px++)
     {
     //raw info of masses 
-    int massSize=m_getImzMLData_p->getPixelMassF(m_pxList[px], m_spectro[0].tmpMass_p);//mass vector
+    massSize=m_getImzMLData_p->getPixelMassF(m_pxList[px], m_spectro[0].tmpMass_p);//mass vector
     if(massSize<=0) continue;
    
     //raw info of intensities  
     m_getImzMLData_p->getPixelIntensityF(m_pxList[px], m_spectro[0].tmpInt_p);
     pxCount++;
-    for(int i=0; i<massSize; i++) 
+    for(int i=1; i<massSize; i++) 
     {
-      if(m_spectro[0].tmpMass_p[i]<m_mzLow) continue;
-      idx =(m_spectro[0].tmpMass_p[i] -m_mzLow)/deltaMass;
-      if(idx<0 || idx>=massAxisSize) { break;}
+      if(m_spectro[0].tmpMass_p[i-1]<m_mzLow) continue;
+      idx0 =(m_spectro[0].tmpMass_p[i-1]-m_mzLow)/deltaMass; //low  mass point index
+      idx1 =(m_spectro[0].tmpMass_p[i]  -m_mzLow)/deltaMass; //high mass point index
+      if(idx0<0 || idx1>=massAxisSize) { break;}
       
-      meanMassAxis_p[idx]+=m_spectro[0].tmpInt_p[i];
+      I0=m_spectro[0].tmpInt_p [i-1]; I1=m_spectro[0].tmpInt_p [i]; //intensity
+      M0=m_spectro[0].tmpMass_p[i-1]; M1=m_spectro[0].tmpMass_p[i]; //mass
+      if(M1<=M0) continue;
+      slope=(I1-I0)/(M1-M0); //slope between two adjacent points
+      for(int j=idx0; j<idx1; j++) //for all bins between points
+      {
+        delta2=j*deltaMass+middle+m_mzLow; //central mass
+        if(delta2<M0) newValue=I0;
+        else 
+        {
+          delta2-=M0; //incremento respecto a M0
+          newValue=slope*delta2+I0; //new intensity
+        }
+        meanMassAxis_p[j]+=newValue; //accumulated into bin
+      }
     }
   }
   NumericVector meanMz(massAxisSize), meanInt(massAxisSize);
-  
   for(int i=0; i<massAxisSize; i++)
   {
-    meanMz[i]=i*deltaMass+m_mzLow;
-    meanInt[i]=meanMassAxis_p[i]/pxCount;
+    meanMz[i]=i*deltaMass+m_mzLow;  //mass into bin
+    meanInt[i]=meanMassAxis_p[i]/pxCount;//intensity into bin
   }
   
   if(meanMassAxis_p) delete [] meanMassAxis_p;
@@ -1693,7 +1731,7 @@ for(int i=iLow; i<=iHigh; i++)
     //The resolution with which the segmentation has been resolved is noted.
     m_massRange_p[mrIndex].resolution=newMassRes*1e6/m_massRange_p[mrIndex].low;
     
-    if(iter>=maxMasterIter) {printf("..........\n"); kmeans.freeClusters();continue;}//voided segment.
+    if(iter>=maxMasterIter) {kmeans.freeClusters();continue;}//voided segment.
     
     //increasing mass ordering
     for(int c=0; c<kmeans.m_kStruct.nClusters; c++)

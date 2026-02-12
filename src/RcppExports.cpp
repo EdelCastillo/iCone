@@ -10,6 +10,21 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// rGetGaussiansFromSpectrum
+List rGetGaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp::NumericVector mz, Rcpp::List params, float mzLow, float mzHigh);
+RcppExport SEXP _iCone_rGetGaussiansFromSpectrum(SEXP intensitySEXP, SEXP mzSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type intensity(intensitySEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type mz(mzSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< float >::type mzLow(mzLowSEXP);
+    Rcpp::traits::input_parameter< float >::type mzHigh(mzHighSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetGaussiansFromSpectrum(intensity, mz, params, mzLow, mzHigh));
+    return rcpp_result_gen;
+END_RCPP
+}
 // imzMLBinReadAllMz
 Rcpp::NumericVector imzMLBinReadAllMz(const char* ibdFname, Rcpp::List imzML);
 RcppExport SEXP _iCone_imzMLBinReadAllMz(SEXP ibdFnameSEXP, SEXP imzMLSEXP) {
@@ -270,6 +285,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_iCone_rGetGaussiansFromSpectrum", (DL_FUNC) &_iCone_rGetGaussiansFromSpectrum, 5},
     {"_iCone_imzMLBinReadAllMz", (DL_FUNC) &_iCone_imzMLBinReadAllMz, 2},
     {"_iCone_testingimzMLBinWriteSequential", (DL_FUNC) &_iCone_testingimzMLBinWriteSequential, 6},
     {"_iCone_CimzMLBinCreateNewIBD", (DL_FUNC) &_iCone_CimzMLBinCreateNewIBD, 2},

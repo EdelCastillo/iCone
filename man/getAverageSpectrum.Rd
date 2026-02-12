@@ -2,22 +2,21 @@
 % Please edit documentation in R/rPeakMatrix.R
 \name{getAverageSpectrum}
 \alias{getAverageSpectrum}
-\title{It obtains the average value of the intensities of the desired spectra.}
+\title{It obtains the average value of the intensities from all data into .imzML file.
+Noise is not taken into account.}
 \usage{
 getAverageSpectrum(
   data_file,
-  params,
   lowMass = 0,
   highMass = 0,
   pxList = c(0),
+  massResolution = 30000,
   overSampling = 4,
   imzMLChecksum = F,
   fixBrokenUUID = F
 )
 }
 \arguments{
-\item{params}{"noiseMethod": method for estimating noise.}
-
 \item{data_file:}{absolute reference to the file with the imzML extension.}
 
 \item{lowMass:}{lower mass to consider}
@@ -25,6 +24,8 @@ getAverageSpectrum(
 \item{highMass:}{higher mass to consider}
 
 \item{pxList:}{list of pixels. First pixel=1. By default everyone.}
+
+\item{massResolution:}{mass resolution with which the spectra were acquired (mz/deltaMz).}
 
 \item{overSampling:}{interval between points on the mass axis = massResolution/overSampling.}
 
@@ -34,9 +35,10 @@ getAverageSpectrum(
 }
 \value{
 a list: averageMz and averageIntensity
-averageMz: array of masses at intervals of 1/2 of the resolution
+averageMz: array of masses at intervals of the resolution/overSampling
 averageIntensity: array of average Gaussians values
 }
 \description{
-It obtains the average value of the intensities of the desired spectra.
+It obtains the average value of the intensities from all data into .imzML file.
+Noise is not taken into account.
 }
