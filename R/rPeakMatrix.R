@@ -747,3 +747,8 @@ remap2ImageCoords <- function(dataPos)
   return(dataPos)
 }
 
+massX<-function(mzVect, initMass, finalMass, sp)
+{
+  if(exists("sp")) rPlotSpectrum(sp, initMass, finalMass)  
+  mzVect[mzVect>=initMass & mzVect<=finalMass]  
+}

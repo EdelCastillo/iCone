@@ -292,15 +292,32 @@ rPlotGaussianSpectrum3<-function(drawInfo1, drawInfo2, drawInfo3, minMass=0, max
   mMass[1]=min(drawInfo1$mass);
   mMass[2]=min(drawInfo2$mass);
   mMass[3]=min(drawInfo3$mass);
-  minMass=min(mMass)
+  
+  if(minMass==0) {minMass=min(mMass);} #eje completo
+  else 
+  {
+    minMass=minMass; 
+    if(minMass<min(mMass))
+    {minMass=min(mMass);
+    print("warning: the low mass was update");}
+  }
   
   mMass[1]=max(drawInfo1$mass);
   mMass[2]=max(drawInfo2$mass);
   mMass[3]=max(drawInfo3$mass);
-  maxMass=max(mMass)
+
+  if(maxMass==0) {maxMass=max(mMass);}
+  else 
+  {
+    maxMass=maxMass; 
+    if(maxMass>max(mMass))
+    {maxMass=max(mMass);
+    print("warning: the high mass was update");}
+  }
   
   if(maxMass<=minMass) {print("mass range is wrong"); return(-1);}
   
+ 
   #se extrae un subconjunto de datos delimitado por minMz y maxMz
   #para arg1
   gauss1_logic=drawInfo1$gaussians[,1]>=minMass & drawInfo1$gaussians[,1]<=maxMass;
@@ -435,7 +452,7 @@ rPlotGaussianSpectrum3<-function(drawInfo1, drawInfo2, drawInfo3, minMass=0, max
   
   #centroides from rMSI2
   centros=rep(0, times=5);
-  if(length(rMSI2_peaks1)>=1)
+  if(rMSI2_peaks1!=-1 && length(rMSI2_peaks1)>=1)
   {
     logicMass<-rMSI2_peaks1>=minMass & rMSI2_peaks1<=maxMass;
     rMSI2_mass<-rMSI2_peaks1[logicMass];
@@ -449,7 +466,7 @@ rPlotGaussianSpectrum3<-function(drawInfo1, drawInfo2, drawInfo3, minMass=0, max
       lines(X, Y-20, type="l", col="red", lwd=3)
     }
   }
-  if(length(rMSI2_peaks2)>=1)
+  if(rMSI2_peaks2!=-1 && length(rMSI2_peaks2)>=1)
   {
     logicMass<-rMSI2_peaks2>=minMass & rMSI2_peaks2<=maxMass;
     rMSI2_mass<-rMSI2_peaks2[logicMass];
@@ -461,7 +478,7 @@ rPlotGaussianSpectrum3<-function(drawInfo1, drawInfo2, drawInfo3, minMass=0, max
       lines(X, Y-20, type="l", col="green", lwd=3)
     }
   }
-  if(length(rMSI2_peaks3)>=1)
+  if(rMSI2_peaks3!=-1 && length(rMSI2_peaks3)>=1)
   {
     logicMass<-rMSI2_peaks3>=minMass & rMSI2_peaks3<=maxMass;
     rMSI2_mass<-rMSI2_peaks3[logicMass];
@@ -482,14 +499,14 @@ rPlotGaussianSpectrum3<-function(drawInfo1, drawInfo2, drawInfo3, minMass=0, max
     X<-rep(mean3_sub[i], times=yHigh)
     lines(X, Y, type="l", col="bisque4", lwd=0.75, lty=2); 
   }
-  for(i in 1:length(mean2_sub))
+  if(0)#for(i in 1:length(mean2_sub))
   {
     yHigh=value2_sub[i]+115
     Y<-1:yHigh;
     X<-rep(mean2_sub[i], times=yHigh)
     lines(X, Y, type="l", col="bisque4", lwd=0.75, lty=2); 
   }
-  for(i in 1:length(mean1_sub))
+  if(0)#for(i in 1:length(mean1_sub))
   {
     yHigh=value1_sub[i]+0
     Y<-1:yHigh;
@@ -497,7 +514,7 @@ rPlotGaussianSpectrum3<-function(drawInfo1, drawInfo2, drawInfo3, minMass=0, max
     lines(X, Y, type="l", col="bisque4", lwd=0.75, lty=2); 
   }
 #  return()
-  if(length(rMSI2_peaks1)>=1 & length(rMSI2_peaks2)>=1 & length(rMSI2_peaks3)>=1)
+  if(0)#if(length(rMSI2_peaks1)>=1 & length(rMSI2_peaks2)>=1 & length(rMSI2_peaks3)>=1)
   {  
     centros=centros/3
     Y<-1:(lineLength+3);
