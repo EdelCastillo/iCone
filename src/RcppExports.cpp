@@ -231,9 +231,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// peakMatrix
-List peakMatrix(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, int nThreads);
-RcppExport SEXP _iCone_peakMatrix(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pxListSEXP, SEXP nThreadsSEXP) {
+// peakMatrixR
+List peakMatrixR(int totalPixels, Rcpp::List params, float mzLow, float mzHigh, int nThreads);
+RcppExport SEXP _iCone_peakMatrixR(SEXP totalPixelsSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP nThreadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type totalPixels(totalPixelsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< float >::type mzLow(mzLowSEXP);
+    Rcpp::traits::input_parameter< float >::type mzHigh(mzHighSEXP);
+    Rcpp::traits::input_parameter< int >::type nThreads(nThreadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(peakMatrixR(totalPixels, params, mzLow, mzHigh, nThreads));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rawToGaussiansR
+int rawToGaussiansR(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, int nThreads);
+RcppExport SEXP _iCone_rawToGaussiansR(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pxListSEXP, SEXP nThreadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -244,7 +259,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< float >::type mzHigh(mzHighSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pxList(pxListSEXP);
     Rcpp::traits::input_parameter< int >::type nThreads(nThreadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(peakMatrix(ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads));
+    rcpp_result_gen = Rcpp::wrap(rawToGaussiansR(ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -301,7 +316,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_iCone_CimzMLParse", (DL_FUNC) &_iCone_CimzMLParse, 1},
     {"_iCone_CimzMLStore", (DL_FUNC) &_iCone_CimzMLStore, 3},
     {"_iCone_rGetPixelGaussians", (DL_FUNC) &_iCone_rGetPixelGaussians, 6},
-    {"_iCone_peakMatrix", (DL_FUNC) &_iCone_peakMatrix, 7},
+    {"_iCone_peakMatrixR", (DL_FUNC) &_iCone_peakMatrixR, 5},
+    {"_iCone_rawToGaussiansR", (DL_FUNC) &_iCone_rawToGaussiansR, 7},
     {"_iCone_rGetAverageGaussianSpectrum", (DL_FUNC) &_iCone_rGetAverageGaussianSpectrum, 8},
     {"_iCone_rGetAverageSpectrum", (DL_FUNC) &_iCone_rGetAverageSpectrum, 7},
     {NULL, NULL, 0}

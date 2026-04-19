@@ -147,7 +147,7 @@ OnePixel::OnePixel(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, fl
   m_massSegment.nGaussians_p=0;
   
   m_gaussians.gauss_p=0;
-  m_gaussians.initGauss=0;
+//  m_gaussians.initGauss=0;
   
   printf("\tpixel=%d/%d; mzLow=%.4f; mzHigh=%.4f\n",pixel+1, m_NPixels, m_mzLow, m_mzHigh);
   if(pixel<0 || pixel+1>m_NPixels) {m_exit=false; return;}

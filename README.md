@@ -41,12 +41,13 @@ linkedPeaks:        Two peaks are considered linked if they are closer than the 
 
 ### **Step 2**.- The peak selection algorithm is applied and its peak matrix is obtained:
 
-> lst <-**getPeakMatrix**(imzML_file_path, params, initMass, finalMass, pxList, nThreads)
+> lst <-**getPeakMatrix**(file_path, params, initMass, finalMass, pxList, nThreads, imzMLChecksum, fixBrokenUUID)
 
 **Description of the parameters:**   
 ```
-imzML_file_path: Absolute path to the filename with the imzML extension.
-                 The attached binary file, with the ibd extension, must be in the same directory.
+      file_path: If only one sample needs to be analyzed, absolute path to the filename with the imzML extension.
+                 If multiple samples are to be analyzed, the name of the .txt file containing the absolute paths, one line for each sample.  
+                 The attached binary file, with the ibd extension, must be in the same directory that .imzML files.
          params: List of parameters given in Step 1.
        initMass: Initial mass to consider.
       finalMass: Final   mass to consider.
@@ -58,6 +59,8 @@ imzML_file_path: Absolute path to the filename with the imzML extension.
           mass: Vector with the masses associated with each column of peakMatrix.
 massResolution: Vector with the mass resolution achieved in the peak matrix (mz/delta_mz).
  pixelsSupport: Vector with the number of pixels in each column with non-zero intensity.
+ imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
+ fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 ```
 ### **complementary functions.**
 
@@ -194,5 +197,16 @@ Display information from tree spectra on the same plot.
       drawInfo3: information returned by the getPixelGaussians() function.
        initMass: Initial mass to consider.
       finalMass: Final   mass to consider.
+```
+
+> **rPlotIon**(peakMatrix, mz)
+
+Display the spatial distribution of intensities for a given mz.
+Observation: very rudimentary.
+
+**Description of the parameters:**   
+```
+    peakMatrix: information returned by the getPeakMatrix() function. 
+            mz: centroid to be visualized (Da)
 ```
 

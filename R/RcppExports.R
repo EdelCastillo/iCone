@@ -171,29 +171,17 @@ rGetPixelGaussians <- function(ibdFname, imzML, params, mzLow, mzHigh, pixel) {
 }
 
 #'
-#'  @name peakMatrix
-#'  @title converts the info in the imzML file into a peak matrix.
-#'  
-#'  @param ibdFname:  absolute reference to the file with the ibd extension.
-#'  @param imzML:     list with information extracted from the imzML file with import_imzML()
-#'  @param params:    specific parameters
-#'              "SNR": signal-to-noise ratio
-#'   "massResolution": mass resolution with which the spectra were acquired.
-#'      "noiseMethod": method for estimating noise.
-#' "minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered.
-#'      "linkedPeaks": two peaks are considered linked if they are closer than the given standard deviation (by defect=3).   
-#'  @param mzLow:    lower mass to consider
-#'  @param mzHigh:   higher mass to consider
-#'  @param pxList:   list of pixels. First pixel=1. By default everyone.
-#'  @param nThreads: number of threads suggested for parallel processing.
-#'  @return lista: peakMatrix, massVector, massResolution, pixelsSupport
-#'     peakMatrix: matrix of centroids and the intensity associated with each pixel.
-#'     massResolution: 
-#'     massVector: the mz associated with each column of peakmatrix.
-#'     pixelsSupport: number of pixels with intensity >= minPixelsSupport
-#'     
-peakMatrix <- function(ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads) {
-    .Call('_iCone_peakMatrix', PACKAGE = 'iCone', ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads)
+NULL
+
+peakMatrixR <- function(totalPixels, params, mzLow, mzHigh, nThreads) {
+    .Call('_iCone_peakMatrixR', PACKAGE = 'iCone', totalPixels, params, mzLow, mzHigh, nThreads)
+}
+
+#'
+NULL
+
+rawToGaussiansR <- function(ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads) {
+    .Call('_iCone_rawToGaussiansR', PACKAGE = 'iCone', ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads)
 }
 
 rGetAverageGaussianSpectrum <- function(ibdFname, imzML, params, mzLow, mzHigh, pxList, overSampling, nThreads) {

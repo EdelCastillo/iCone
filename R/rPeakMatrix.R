@@ -15,12 +15,14 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #********************************************************************************/
-   
+ 
+
 #' @name getPeakMatrix
 #' @title obtains the peak matrix from imzML files.
-#' @param data_file: absolute reference to the file with the imzML extension.
+#' @param data_file: If multiple samples need to be analyzed, the absolute paths for each sample must be included in a .txt file, line by line. 
+#'        If only one sample is being analyzed, it can be provided directly as an argument. Only files in imzML format are recognized.
 #' @param params  
-#'      "massResolution": mass resolution with which the spectra were acquired.
+#'      "massResolution": desired mass resolution.
 #'                 "SNR": signal-to-noise ratio (by defect=1)
 #'         "noiseMethod": method for estimating noise (by defect="estnoise_mad").
 #'    "minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered (by defect=1).
@@ -28,7 +30,7 @@
 #' @param lowMass:  lower mass to consider
 #' @param highMass: higher mass to consider
 #' @param pxList:   list of pixels. First pixel=1. By default everyone.
-#' @param nThreads: number of threads for parallel processing (if zero, nThreads=maxCores-1)
+#' @param nThreads: number of threads for parallel processing (by default maxCores-1)
 #' @param imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
 #' @param fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 #'
@@ -54,35 +56,35 @@ getPeakMatrix<-function(data_file,
   
   #parameters control 
   if(lowMass==0 && highMass==0)
-    {print("ERROR: lowMass and highMass must be given."); return (0);}
+    {cat("ERROR: lowMass and highMass must be given.\n"); return (0);}
   if(!(exists("SNR", where=params)))
   {
-    print("warning: by default, SNR parameter will be 1.")
+    cat("warning: by default, SNR parameter will be 1.\n")
     params=c(params, "SNR"=1)
   }
   if(!(exists("minPixelsSupport", where=params)))
   {
-    print("warning: by default, minPixelsSupport parameter will be 1%.")
+    cat("warning: by default, minPixelsSupport parameter will be 1%.\n")
     params=c(params, "minPixelsSupport"=1)
   }
   if(!(exists("noiseMethod", where=params)))
   {
-    print("warning: by default, noiseMethod parameter will be MAD type.")
+    cat("warning: by default, noiseMethod parameter will be MAD type.\n")
     params=c(params, "noiseMethod"="estnoise_mad")
   }
   if(!(exists("linkedPeaks", where=params)))
   {
-    print("warning: by default, linkedPeaks parameter will be 3 sd.") 
+    cat("warning: by default, linkedPeaks parameter will be 3 sd.\n") 
     params=c(params, "linkedPeaks"=3)
   }
   if(!(exists("massResolution", where=params)))
   {
-    print("ERROR: massResolution parameter is required.") 
+    cat("ERROR: massResolution parameter is required.\n") 
     return (0)
   }
   if(params$massResolution<=0)
   {
-    print("ERROR: massResolution must be greater than zero.") 
+    cat("ERROR: massResolution must be greater than zero.\n") 
     return (0)
   }
 
@@ -92,8 +94,7 @@ getPeakMatrix<-function(data_file,
   #fun_label This is a callback function to update the progress bar dialog text.
   fun_label <- function(text)
     {
-      cat(text)
-      cat("\n")
+      cat(text, "\n")
     }
   #fun_progress This is a callback function to update the progress of loading data. See details for more information.
   fun_progress = NULL; 
@@ -102,32 +103,71 @@ getPeakMatrix<-function(data_file,
   #imzMLRename the image name, if NULL a default name based on the file name will be used.
   imzMLRename  = NULL;
   pt<-proc.time()
-
+  
+  samples=1; #default number of samples to be analyzed.
+  totalPixels=0;
+  samples=c();
+  
   fileExtension <- unlist(strsplit(basename(data_file), split = "\\."))
   fileExtension <- as.character(fileExtension[length(fileExtension)])
-  if( fileExtension == "imzML")
-  {
-    #capturing information from an imzML file.
-    in_img <- import_imzML(path.expand(data_file),  fun_progress = fun_progress, fun_text = fun_label, 
-                           close_signal = close_signal, verifyChecksum = imzMLChecksum, subImg_rename = imzMLRename, 
-                           subImg_Coords = NULL, fixBrokenUUID = fixBrokenUUID)
+  if( fileExtension == "txt")
+    {  
+    fileCon <- file(data_file, open="r") # We opened the connection.
+    samples <- readLines(fileCon) #The file names are loaded line by line.
+    close(fileCon);
     
-    #binary data file name.
-    file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
-    if(lowMass>highMass)
-    {
-      print("warning: the lower mass exceeds the upper mass")
-      lowMass=highMass
     }
-    #peak matrix generation.
-    peakMatrix<-peakMatrix(file, in_img$data$imzML, params, lowMass, highMass, pxList-1, nThreads);
+  else
+  {
+    samples=data_file; #unique sample.
+  }
   
+  #Deletion of temporary files, if any.
+  if(file.exists("tmpGaussians.bin")) file.remove("tmpGaussians.bin");
+  if(file.exists("tmpPixelsCoordinates.bin")) file.remove("tmpPixelsCoordinates.bin");
+  
+  nSamples=length(samples);
+  if(length(samples)>50)
+  {
+    cat("Warning: the maximum number of samples allowed has been reached. It is limited to 50.\n)");
+    nSamples=50;
+  }
+  
+  for( sample in 1 : nSamples)
+    {
+    if(substr(samples[sample], 1, 1)=='#' || substr(samples[sample], 1, 1)==' ') next;
+    fileExtension <- unlist(strsplit(basename(samples[sample]), split = "\\."))
+    fileExtension <- as.character(fileExtension[length(fileExtension)])
+    if( fileExtension == "imzML")
+    {
+      cat(sprintf("\nSample file name: %s\n", samples[sample]))
+      
+      #capturing information from an imzML file.
+      in_img <- import_imzML(path.expand(samples[sample]),  fun_progress = fun_progress, fun_text = fun_label, 
+                             close_signal = close_signal, verifyChecksum = imzMLChecksum, subImg_rename = imzMLRename, 
+                             subImg_Coords = NULL, fixBrokenUUID = fixBrokenUUID)
+      
+      #binary data file name.
+      file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
+      if(lowMass>highMass)
+      {
+        cat("warning: the lower mass exceeds the upper mass\n")
+        lowMass=highMass
+      }
+     #imzML file to Gaussians (for each sample).
+     nPixels=rawToGaussiansR(file, in_img$data$imzML, params, lowMass, highMass, pxList-1, nThreads);
+     totalPixels=totalPixels+nPixels;
+    }
+  }
+  #Gaussians to peak matrix (for all samples)
+   peakMatrix=peakMatrixR(totalPixels, params, lowMass, highMass, nThreads);
+     
   gc()  
   pt<-proc.time() - pt
   display_processing_time(pt, "Data processing time")
   return(peakMatrix)
-  }
-  print("warning: imzML file type is required." )
+  
+  cat("warning: imzML file type is required.\n" )
 }
 
 
@@ -167,27 +207,27 @@ getPixelGaussians<-function(data_file,
   #control de parámetros
   if(!(exists("SNR", where=params)))
   {
-    print("warning: by default, SNR parameter will be 1.")
+    cat("warning: by default, SNR parameter will be 1.\n")
     params=c(params, "SNR"=1)
   }
   if(!(exists("minPixelsSupport", where=params)))
   {
-    print("warning: by default, minPixelsSupport parameter will be 1%.")
+    cat("warning: by default, minPixelsSupport parameter will be 1%.\n")
     params=c(params, "minPixelsSupport"=1)
   }
   if(!(exists("noiseMethod", where=params)))
   {
-    print("warning: by default, noiseMethod will be MAD type.")
+    cat("warning: by default, noiseMethod will be MAD type.\n")
     params=c(params, "noiseMethod"="estnoise_mad")
   }
   if(!(exists("massResolution", where=params)))
   {
-    print("ERROR: massResolution parameter is required.") 
+    cat("ERROR: massResolution parameter is required.\n") 
     return (0)
   }
   if(params$massResolution<=0)
   {
-    print("ERROR: massResolution must be greater than zero.") 
+    cat("ERROR: massResolution must be greater than zero.\n") 
     return (0)
   }
   
@@ -197,8 +237,7 @@ getPixelGaussians<-function(data_file,
   #fun_label This is a callback function to update the progress bar dialog text.
   fun_label <- function(text)
   {
-    cat(text)
-    cat("\n")
+    cat(text, "\n")
   }
   #fun_progress This is a callback function to update the progress of loading data. See details for more information.
   fun_progress = NULL; 
@@ -222,12 +261,12 @@ getPixelGaussians<-function(data_file,
     file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
     if(lowMass>highMass)
     {
-      print("warning: the lower mass exceeds the upper mass")
+      cat("warning: the lower mass exceeds the upper mass.\n")
       lowMass=highMass
     }
     if(pixel<1) 
     {
-      print("warning: pixel must be greater than zero. Thus, pixels will be 1.")
+      cat("warning: pixel must be greater than zero. Thus, pixels will be 1.\n")
       pixel=1;
     }
     #info about pixel (the first pixel is zero)
@@ -237,7 +276,7 @@ getPixelGaussians<-function(data_file,
     display_processing_time(pt, "Data processing time")
     return(pxGauss)
   }
-  print("warning: imzML file type is required." )
+  cat("warning: imzML file type is required.\n" )
 }
 
 #' @name getAverageGaussianSpectrum
@@ -277,32 +316,32 @@ getAverageGaussianSpectrum<-function(data_file,
   #control de parámetros
   if(!(exists("SNR", where=params)))
   {
-    print("warning: by default, SNR parameter will be 1.")
+    cat("warning: by default, SNR parameter will be 1.\n")
     params=c(params, "SNR"=1)
   }
   if(!(exists("minPixelsSupport", where=params)))
   {
-    print("warning: by default, minPixelsSupport parameter will be 1%.")
+    cat("warning: by default, minPixelsSupport parameter will be 1%.\n")
     params=c(params, "minPixelsSupport"=1)
   }
   if(!(exists("noiseMethod", where=params)))
   {
-    print("warning: by default, noiseMethod will be MAD type.")
+    cat("warning: by default, noiseMethod will be MAD type.\n")
     params=c(params, "noiseMethod"="estnoise_mad")
   }
   if(!(exists("linkedPeaks", where=params)))
   {
-    #print("warning: by default, linkedPeaks parameter will be 3 sd.") 
+    #cat("warning: by default, linkedPeaks parameter will be 3 sd.\n") 
     params=c(params, "linkedPeaks"=3)
   }
   if(!(exists("massResolution", where=params)))
   {
-    print("ERROR: massResolution parameter is required.") 
+    cat("ERROR: massResolution parameter is required.\n") 
     return (0)
   }
   if(params$massResolution<=0)
   {
-    print("ERROR: massResolution must be greater than zero.") 
+    cat("ERROR: massResolution must be greater than zero.\n") 
     return (0)
   }
 
@@ -312,8 +351,7 @@ getAverageGaussianSpectrum<-function(data_file,
   #fun_label This is a callback function to update the progress bar dialog text.
   fun_label <- function(text)
   {
-    cat(text)
-    cat("\n")
+    cat(text, "\n")
   }
   #fun_progress This is a callback function to update the progress of loading data. See details for more information.
   fun_progress = NULL; 
@@ -337,7 +375,7 @@ getAverageGaussianSpectrum<-function(data_file,
     file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
     if(lowMass>highMass)
     {
-      print("warning: the lower mass exceeds the upper mass")
+      cat("warning: the lower mass exceeds the upper mass.\n")
       lowMass=highMass
     }
 
@@ -347,7 +385,7 @@ getAverageGaussianSpectrum<-function(data_file,
     display_processing_time(pt, "Data processing time")
     return(avSp)
   }
-  print("warning: imzML file type is required." )
+  cat("warning: imzML file type is required.\n" )
 }
 
 #' @name getAverageSpectrum
@@ -392,8 +430,7 @@ getAverageSpectrum<-function(data_file,
   #fun_label This is a callback function to update the progress bar dialog text.
   fun_label <- function(text)
   {
-    cat(text)
-    cat("\n")
+    cat(text, "\n")
   }
   #fun_progress This is a callback function to update the progress of loading data. See details for more information.
   fun_progress = NULL; 
@@ -417,7 +454,7 @@ getAverageSpectrum<-function(data_file,
     file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
     if(lowMass>highMass)
     {
-      print("warning: the lower mass exceeds the upper mass")
+      cat("warning: the lower mass exceeds the upper mass.\n")
       lowMass=highMass
     }
     
@@ -427,7 +464,7 @@ getAverageSpectrum<-function(data_file,
     display_processing_time(pt, "Data processing time")
     return(avSp)
   }
-  print("warning: imzML file type is required." )
+  cat("warning: imzML file type is required.\n" )
 }
 
 #' @name getGaussiansFromSpectrum
@@ -465,7 +502,7 @@ getGaussiansFromSpectrum<-function(
   
     if(lowMass>highMass)
     {
-      print("warning: the lower mass exceeds the upper mass")
+      cat("warning: the lower mass exceeds the upper mass.\n")
       lowMass=highMass
     }
     

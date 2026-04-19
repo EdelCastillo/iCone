@@ -84,7 +84,7 @@ GaussiansFromSpectrum::GaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp
   m_peakFG.peakUsize=0;
   
   m_gaussians.gauss_p=0;
-  m_gaussians.initGauss=0;
+//  m_gaussians.initGauss=0;
   
   printf("\tmzLow=%.4f; mzHigh=%.4f\n",m_mzLow, m_mzHigh);
 

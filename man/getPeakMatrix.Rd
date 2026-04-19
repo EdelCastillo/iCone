@@ -16,13 +16,14 @@ getPeakMatrix(
 )
 }
 \arguments{
-\item{params}{"massResolution": mass resolution with which the spectra were acquired.
+\item{params}{"massResolution": desired mass resolution.
 "SNR": signal-to-noise ratio (by defect=1)
 "noiseMethod": method for estimating noise (by defect="estnoise_mad").
 "minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered (by defect=1).
 "linkedPeaks": two peaks are considered linked if they are closer than the given standard deviation (by defect=3).}
 
-\item{data_file:}{absolute reference to the file with the imzML extension.}
+\item{data_file:}{If multiple samples need to be analyzed, the absolute paths for each sample must be included in a .txt file, line by line.
+If only one sample is being analyzed, it can be provided directly as an argument. Only files in imzML format are recognized.}
 
 \item{lowMass:}{lower mass to consider}
 
@@ -30,7 +31,7 @@ getPeakMatrix(
 
 \item{pxList:}{list of pixels. First pixel=1. By default everyone.}
 
-\item{nThreads:}{number of threads for parallel processing (if zero, nThreads=maxCores-1)}
+\item{nThreads:}{number of threads for parallel processing (by default maxCores-1)}
 
 \item{imzMLChecksum:}{if the binary file checksum must be verified, it can be disabled for convenice with really big files.}
 

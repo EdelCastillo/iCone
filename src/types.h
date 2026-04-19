@@ -25,6 +25,7 @@
 #include "GMM.h"
 
 #define MAX_THREADS 50
+#define MAX_SAMPLES 50
 
     typedef struct{
         int x, y;
@@ -83,7 +84,7 @@
     typedef struct
     {
       GAUSS_PARAMS *gauss_p;  //pointer to Gaussian parameters.
-      int size, initGauss;    //array size
+      int size;    //array size
     }GAUSS_SP;
     
     typedef struct SEGMENT

@@ -549,5 +549,35 @@ rPlotSpectrum<-function(values, mzLow, mzHigh)
   axis(1); ##visualiza el eje X
   axis(2)
 #  lines(mass, intensity, type="p",col="blue",lwd=1)
-  
 }
+
+#' @name rPlotIon
+#' @title visualize an ion.
+#' @param pMatrix: peak matrix from getPeakMatrix().
+#' @param mz: desired mass (Da).
+#' @comment very poor solution.
+#' @export
+rPlotIon<-function(pMatrix, mz)
+{
+  colors=c("red3", "red",  "orange1", "yellow", "forestgreen", "olivedrab", "yellowgreen", "cyan", "blue")
+  ionIndex=which.min(abs(pMatrix$mass - mz))
+
+  intensity=pMatrix$peakMatrix[,ionIndex]
+  coord=pMatrix$coordinates
+  #maxInt=max(intensity)
+  maxInt=mean(intensity)+3*sd(intensity)
+  co=(maxInt/9)
+  X=coord[,1]
+  Y=coord[,2]
+  data=abs(intensity/co)
+  plot(X, Y,  type="p", col="white")
+  for (i in 1:length(pMatrix$coordinates[,1]))
+  {
+    A=intensity[i]/co;
+    A=9-(A%%9)
+    if(A>9) A=9;
+    lines(X[i], Y[i], type="p", cex=0.1, col=colors[A])
+  }
+}
+
+
