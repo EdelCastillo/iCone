@@ -8,8 +8,8 @@
 getPixelGaussians(
   data_file,
   params,
-  lowMass = 0,
-  highMass = 0,
+  initMass = 0,
+  finalMass = 0,
   pixel = 1,
   imzMLChecksum = F,
   fixBrokenUUID = F
@@ -22,9 +22,9 @@ getPixelGaussians(
 
 \item{data_file:}{absolute reference to the file with the imzML extension.}
 
-\item{lowMass:}{lower mass to consider}
+\item{initMass:}{lower mass to consider}
 
-\item{highMass:}{higher mass to consider}
+\item{finalMass:}{higher mass to consider}
 
 \item{pixel:}{spectrum to evaluate. First pixel=1}
 

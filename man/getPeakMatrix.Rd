@@ -7,8 +7,8 @@
 getPeakMatrix(
   data_file,
   params,
-  lowMass = 0,
-  highMass = 0,
+  initMass = 0,
+  finalMass = 0,
   pxList = c(0),
   nThreads = 0,
   imzMLChecksum = F,
@@ -22,16 +22,19 @@ getPeakMatrix(
 "minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered (by defect=1).
 "linkedPeaks": two peaks are considered linked if they are closer than the given standard deviation (by defect=3).}
 
-\item{data_file:}{If multiple samples need to be analyzed, the absolute paths for each sample must be included in a .txt file, line by line.
-If only one sample is being analyzed, it can be provided directly as an argument. Only files in imzML format are recognized.}
+\item{data_file:}{A list of the absolute paths of the files to be processed is required.
+Alternatively, a single filename with the 'txt' extension containing the absolute paths of all files to be processed is acceptable.
+In file.txt, lines are considered comments if they begin with the '#' character or the blank character.
+Only files in 'imzML' format are recognized.
+The attached binary file, with the 'ibd' extension, must be in the same directory that 'imzML' files.}
 
-\item{lowMass:}{lower mass to consider}
+\item{initMass:}{Initial  mass to consider. By default, the minimum value from the entire range of masses is used.}
 
-\item{highMass:}{higher mass to consider}
+\item{finalMass:}{Final    mass to consider. By default, the maximum value from the entire range of masses is used.}
 
-\item{pxList:}{list of pixels. First pixel=1. By default everyone.}
+\item{pxList:}{List of pixels. First pixel=1. By default everyone.}
 
-\item{nThreads:}{number of threads for parallel processing (by default maxCores-1)}
+\item{nThreads:}{Number of threads for parallel processing (by default maxCores-1)}
 
 \item{imzMLChecksum:}{if the binary file checksum must be verified, it can be disabled for convenice with really big files.}
 
@@ -41,7 +44,11 @@ If only one sample is being analyzed, it can be provided directly as an argument
 a list:
 peakMatrix: Matrix of peak (centroids) rows = pixels, columns = intensity of each pixel.
 mass: Vector with the masses associated with each column of peakMatrix.
+massResolution: mass resolution associated with each mass.
 pixelsSupport: Vector with the number of pixels in each column with non-zero intensity.
+coordinates: Matrix with pixel coordinates (X/Y).
+pixelsSample: Vector with the number of pixels in each of the samples. In the peakMatrix and coordinates they appear in the same order.
+pixelSize_um: Vector with the size of the pixels (spatial resolution) in micrometers.
 }
 \description{
 obtains the peak matrix from imzML files.

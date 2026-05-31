@@ -25,19 +25,19 @@
 #' @title Presents an image with the Gaussians from a spectra fragment,
 #' along with the curve resulting from the sum of all of them (in red).
 #' The blue circles indicate the original intensity data to be adjusted.
-#' The drawInfo parameters come from rGetPeakMatrix()
+#' The drawInfo parameters come from getPixelGaussians() or getGaussiansFromSpectrum()
 #'
 #' @param drawInfo$gaussians: matrix
 #'  column 1 -> mean values of each Gaussian.
 #'  column 2 -> standard deviation.
 #'  column 3 -> factor associated with each Gaussian.
 #' @param drawInfo$mass: vector (in Daltons).
-#' @param drawInfo$intensity: vector of intensities
-#'
+#' @param drawInfo$intensity: vector of intensities. It can be null or non-existent.
+#' @param sum: if TRUE, the sum of Gaussian is displayed.
 #' @return -1 if KO; 0 if OK
 #' @export
 #' 
-rPlotGaussianSpectrum<-function(drawInfo, minMass=0, maxMass=0)
+rPlotGaussianSpectrum<-function(drawInfo, minMass=0, maxMass=0, sum=TRUE)
 {
   if(length(drawInfo$mass)<2) {print("no data to draw"); return(-1);}
   
@@ -53,7 +53,9 @@ rPlotGaussianSpectrum<-function(drawInfo, minMass=0, maxMass=0)
   
   logic=drawInfo$mass>=minX & drawInfo$mass<=maxX
   mass=drawInfo$mass[logic]
-  intensity=drawInfo$intensity[logic]
+  intensity=c(0)
+  if(exists("intensity", where=drawInfo) && length(intensity)>1)
+    intensity=drawInfo$intensity[logic]
   nPoints=length(mass)
   
   if(nPoints<2) {print("no data to draw."); return(-1);}
@@ -81,7 +83,8 @@ rPlotGaussianSpectrum<-function(drawInfo, minMass=0, maxMass=0)
   plot(X, Y, type="p",col="white",lwd=.01, main="spectrum", xlab="mz(Daltons)", 
        ylab="Intensity", las=1, col.axis="black");  
   totalY=0; #used to represent the sum curve.
-  lines(mass, intensity, type="p",col="blue",lwd=1)
+  if(length(intensity)>1)
+    lines(mass, intensity, type="p",col="blue",lwd=1)
   
   deltaX<-minSigma/10; #5 points fit within the lowest sigma (resolution in X).
   if(deltaX<1e-6) deltaX=1e-6;
@@ -97,8 +100,9 @@ rPlotGaussianSpectrum<-function(drawInfo, minMass=0, maxMass=0)
     totalY=totalY+Y; #the sum is updated.
     color=((i-1)%%8)+1;
     lines(X, Y, type="l", col=color, lwd=1); #the current Gaussian is drawn.
-    }
-  lines(X, totalY, type="l", col="red", lwd=2); #the sum curve is drawn.
+  }
+  if(sum==TRUE)
+    lines(X, totalY, type="l", col="red", lwd=2); #the sum curve is drawn.
   return(0);
 }
 
@@ -107,7 +111,7 @@ rPlotGaussianSpectrum<-function(drawInfo, minMass=0, maxMass=0)
 #' @title Presents an image with the Gaussians of two spectrum fragments,
 #' along with the curve resulting from the sum of them (in red).
 #' The blue circles indicate the original concentration data to be adjusted.
-#' The drawInfo parameters come from rGetPeakMatrix()
+#' The drawInfo parameters come from getPixelGaussians() or getGaussiansFromSpectrum()
 #' 
 #' @param drawInfo$gaussians: matrix
 #'  column 1 -> mean values of each Gaussian.
@@ -268,7 +272,7 @@ rPlotGaussianSpectrum2<-function(drawInfo1, drawInfo2, minMass=0, maxMass=0)
 #' @title Presents an image with the Gaussians of three spectrum fragments,
 #' along with the curve resulting from the sum of them (in red).
 #' The blue circles indicate the original intensity data to be adjusted.
-#' The drawInfo parameters come from rGetPeakMatrix()
+#' The drawInfo parameters come from getPixelGaussians() or getGaussiansFromSpectrum()
 #' 
 #' @param drawInfo$gaussians: matrix
 #'  column 1 -> mean values of each Gaussian.
@@ -530,7 +534,7 @@ rPlotGaussianSpectrum3<-function(drawInfo1, drawInfo2, drawInfo3, minMass=0, max
 
 #' @name rPlotSpectrum
 #' @title Presents an image with the info of two spectrum fragments,
-#' @param List
+#' @param List: values come from getAverageSpectrum() or getAverageGaussianSpectrum()
 #'  values$averageMz: vector of mases(in Daltons).
 #'  values$averageIntensity: vector of intesities
 #' @param mzLow : minimun mz

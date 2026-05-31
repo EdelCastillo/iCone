@@ -5,7 +5,7 @@
 \title{Presents an image with the Gaussians of two spectrum fragments,
 along with the curve resulting from the sum of them (in red).
 The blue circles indicate the original concentration data to be adjusted.
-The drawInfo parameters come from rGetPeakMatrix()}
+The drawInfo parameters come from getPixelGaussians() or getGaussiansFromSpectrum()}
 \usage{
 rPlotGaussianSpectrum2(drawInfo1, drawInfo2, minMass = 0, maxMass = 0)
 }
@@ -30,5 +30,5 @@ column 3 -> factor associated with each Gaussian.}
 Presents an image with the Gaussians of two spectrum fragments,
 along with the curve resulting from the sum of them (in red).
 The blue circles indicate the original concentration data to be adjusted.
-The drawInfo parameters come from rGetPeakMatrix()
+The drawInfo parameters come from getPixelGaussians() or getGaussiansFromSpectrum()
 }

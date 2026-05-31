@@ -7,8 +7,8 @@ Noise is not taken into account.}
 \usage{
 getAverageSpectrum(
   data_file,
-  lowMass = 0,
-  highMass = 0,
+  initMass = 0,
+  finalMass = 0,
   pxList = c(0),
   massResolution = 30000,
   overSampling = 4,
@@ -19,9 +19,9 @@ getAverageSpectrum(
 \arguments{
 \item{data_file:}{absolute reference to the file with the imzML extension.}
 
-\item{lowMass:}{lower mass to consider}
+\item{initMass:}{lower mass to consider}
 
-\item{highMass:}{higher mass to consider}
+\item{finalMass:}{higher mass to consider}
 
 \item{pxList:}{list of pixels. First pixel=1. By default everyone.}
 

@@ -62,6 +62,110 @@
    return pMatrix.m_NPixels;
  }
  
+ //information capture
+ //'  @name rGetBasicInfo
+ //'  @title returns basic information about dimensions from the imzML file.
+ //'  
+ //'  @param ibdFname:  absolute reference to the file with the ibd extension.
+ //'  @param imzML:     list with information extracted from the imzML file with import_imzML()
+ //'  @param pxList:    list of pixels. First pixel=1. By default everyone.
+ //'  @return list:     minPixel, maxPixel, minMz, maxMz
+ //'     
+ // [[Rcpp::export]]
+ List rGetBasicInfo(const char* ibdFname, Rcpp::List imzML, Rcpp::NumericVector pxList)
+ {
+   List ret=0;
+   //class for accessing imzML files.
+   GetImzMLData *getImzMLData_p=0;
+   float *rawMzData=0;
+   Rcpp::DataFrame df;
+   df=imzML["run"];
+   bool continuous=imzML["continuous_mode"], hit;
+   int nPixels, minPx, maxPx, maxMzLength=0, minMzLength=0x7FFFFFFF, massSize, px;
+   float minMz=1e32, maxMz=0;
+   
+   NumericVector mzLength=df["mzLength"];
+   
+   if(pxList.size()==1 && pxList[0]==-1) //by defect, all pixels
+   {
+     hit=false;
+     nPixels=df.nrows();
+     minPx=1; maxPx=nPixels;
+     for(int px=0; px<nPixels; px++)
+     {
+       if(mzLength[px]>maxMzLength) maxMzLength=mzLength[px]; //maximum spectrum length
+       if(mzLength[px]<minMzLength) minMzLength=mzLength[px]; //minimum spectrum length
+     }
+     rawMzData=new float[maxMzLength]; 
+     getImzMLData_p= new GetImzMLData(ibdFname, imzML);   
+     
+     for(int px=0; px<nPixels; px++)
+     {
+       massSize=getImzMLData_p->getPixelMassF(px, rawMzData);//mass vector
+       if(massSize<=0)
+       {
+         printf("ERROR reading from the %s file\n", ibdFname);
+         hit=true;
+         break;
+       }
+       massSize--;
+       if(rawMzData[0]<minMz)        minMz=rawMzData[0];
+       if(rawMzData[massSize]>maxMz) maxMz=rawMzData[massSize];
+     }
+     
+   }
+   else //only pixels passed
+   {
+     hit=false; //all OK
+     nPixels=pxList.size();
+     minPx=0x7FFFFFFF, maxPx=0;
+     
+     for(int i=0; i<nPixels; i++)
+     {
+       if(pxList[i]<minPx) minPx=pxList[i];
+       if(pxList[i]>maxPx) maxPx=pxList[i];
+     }
+     if(minPx<0 || minPx>maxPx)
+     {
+       printf("ERROR: some pixels are out of range(%d/%d)\n", minPx, maxPx);
+       hit=true;
+       return true; //warning
+     }
+     
+     for(int i=0; i<nPixels; i++)
+     {
+       px=pxList[i];
+       if(mzLength[px]>maxMzLength) maxMzLength=mzLength[px]; //maximum spectrum length
+       if(mzLength[px]<minMzLength) minMzLength=mzLength[px]; //minimum spectrum length
+     }
+     rawMzData=new float[maxMzLength]; 
+     getImzMLData_p= new GetImzMLData(ibdFname, imzML);   
+     
+     for(int i=0; i<nPixels; i++)
+     {
+       px=pxList[i];
+       massSize=getImzMLData_p->getPixelMassF(px, rawMzData);//mass vector
+       if(massSize<=0)
+       {
+         printf("ERROR reading from the %s file\n", ibdFname);
+         hit=true;
+         break;
+       }
+       massSize--;
+       if(rawMzData[0]<minMz) minMz=rawMzData[0];
+       if(rawMzData[massSize]>maxMz) maxMz=rawMzData[massSize];
+     }
+     minPx++; maxPx++; //for R
+   }
+   
+   if(getImzMLData_p) delete getImzMLData_p;
+   if(rawMzData)      delete rawMzData;
+   if(!hit){
+     List ret=List::create(Named("minPixel")=minPx, Named("maxPixel")=maxPx, Named("minMz")=minMz, Named("maxMz")=maxMz);
+     return ret;
+   }
+   return 0;
+ }
  
  //'  @name rGetAverageGaussianSpectrum
  //'  @title converts the info in the imzML file into two arrays: Gaussians average values versus masses

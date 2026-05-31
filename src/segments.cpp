@@ -127,12 +127,14 @@ int Segments::getMassRanges(float* linkedPeak_p)
   {
     acu=0;
     for(int j=0; j<massAxisSize; j++)
+    {
       if(massAxis[j]<=vMean){acu+=massAxis[j];}
       else acu+=vMean;
-      vMean=acu/massAxisSize;
-      if(i==0) {value[0]=vMean;}
-      else if(i==1) {value[1]=vMean; minDiff=abs(value[0]-value[1])*0.01; }
-      else {if(abs(vMean-value[1])<minDiff) break; else value[1]=vMean;}
+    }
+    vMean=acu/massAxisSize;
+    if(i==0) {value[0]=vMean;}
+    else if(i==1) {value[1]=vMean; minDiff=abs(value[0]-value[1])*0.01; }
+    else {if(abs(vMean-value[1])<minDiff) break; else value[1]=vMean;}
   }
  
   //decision of the value assigned to noise.
@@ -183,11 +185,17 @@ int Segments::getMassRanges(float* linkedPeak_p)
     //It is estimated that segments larger than 3 Da are not suitable for segmentation.
     if(highMz-lowMz <=3.0)
     {
+      if(iSegment>=maxSegments) 
+      {
+        printf("Warning: The limit of planned segments (%d) has been reached.\nIt is suggested to increase the value of the linkedPeaks argument.", maxSegments);
+        break;   //no more space
+      }
       m_massRange_p[iSegment].low =lowMz;//package ends
       m_massRange_p[iSegment++].high=highMz;
     }
     else
     {
+      //It is analyzed in terms of the range of conflicting masses.
       localSNR=1;
       spectro.int_p=massAxis+iLowMass;
       spectro.size=iHighMass-iLowMass+1;
@@ -206,7 +214,7 @@ int Segments::getMassRanges(float* linkedPeak_p)
       while(true)
       {
         localSNR+=1;
-        IntensityPeak intPeak(localSNR); //simple and compound peaks are obtained with SNR=1.
+        IntensityPeak intPeak(localSNR); //simple and compound peaks are obtained with SNR update.
         intPeak.getPeakList(&spectro); 
         nUPeak2=intPeak.getCompoundPeakNumber(); //#compound peaks.
         hit=true;
@@ -222,17 +230,22 @@ int Segments::getMassRanges(float* linkedPeak_p)
         }
         if(hit) //solution found.
         {
-          for(int j=0; j<nUPeak2; j++) 
+          if(iSegment>=maxSegments)
           {
-            pLow =intPeak.getCompoundPeak(j).peakLow; //index to lower peak of the composite peak.
-            pHigh=intPeak.getCompoundPeak(j).peakHigh;//index to upper peak of the composite peak.
-            iLowMass2 =intPeak.getSinglePeak(pLow). low +iLowMass;
-            iHighMass2=intPeak.getSinglePeak(pHigh).high+iLowMass;
-            lowMz =m_mzLow+iLowMass2 *deltaMass; //lower  mass.
-            highMz=m_mzLow+iHighMass2*deltaMass; //higher mass.
-            m_massRange_p[iSegment].low =lowMz;//package ends
-            m_massRange_p[iSegment++].high=highMz;
+            printf("Warning: The limit of planned segments (%d) has been reached.\nIt is suggested to increase the value of the linkedPeaks argument.", maxSegments);
+            break;   //no more space
           }
+          for(int j=0; j<nUPeak2; j++) 
+            {
+              pLow =intPeak.getCompoundPeak(j).peakLow; //index to lower peak of the composite peak.
+              pHigh=intPeak.getCompoundPeak(j).peakHigh;//index to upper peak of the composite peak.
+              iLowMass2 =intPeak.getSinglePeak(pLow). low +iLowMass;
+              iHighMass2=intPeak.getSinglePeak(pHigh).high+iLowMass;
+              lowMz =m_mzLow+iLowMass2 *deltaMass; //lower  mass.
+              highMz=m_mzLow+iHighMass2*deltaMass; //higher mass.
+              m_massRange_p[iSegment].low =lowMz;//package ends
+              m_massRange_p[iSegment++].high=highMz;
+            }
           break;
         }
       }

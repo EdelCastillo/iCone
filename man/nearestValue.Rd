@@ -2,9 +2,9 @@
 % Please edit documentation in R/test.R
 \name{nearestValue}
 \alias{nearestValue}
-\title{nearestValue
+\title{nearestValue()
 Return the nearest value in data
-Algoritmo de aproximaciones sucesivas}
+Successive approximation algorithm.}
 \usage{
 nearestValue(value, data)
 }
@@ -18,7 +18,7 @@ nearest value in data to value; -1 if value es out of range
 export
 }
 \description{
-nearestValue
+nearestValue()
 Return the nearest value in data
-Algoritmo de aproximaciones sucesivas
+Successive approximation algorithm.
 }

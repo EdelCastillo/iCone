@@ -9,7 +9,8 @@ rPlotSpectrum(values, mzLow, mzHigh)
 \arguments{
 \item{mzLow}{: minimun mz}
 
-\item{List}{values$averageMz: vector of mases(in Daltons).
+\item{List:}{values come from getAverageSpectrum() or getAverageGaussianSpectrum()
+values$averageMz: vector of mases(in Daltons).
 values$averageIntensity: vector of intesities}
 
 \item{mzHigh:}{maximun mz}

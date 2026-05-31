@@ -1,7 +1,7 @@
 ---
 title: "iCone: basic information"
 author: "E del Castillo"
-date: 'January 2026'
+date: 'January, 2026'
 output: html_document
 ---
 
@@ -45,23 +45,32 @@ linkedPeaks:        Two peaks are considered linked if they are closer than the 
 
 **Description of the parameters:**   
 ```
-      file_path: If only one sample needs to be analyzed, absolute path to the filename with the imzML extension.
-                 If multiple samples are to be analyzed, the name of the .txt file containing the absolute paths, one line for each sample.  
-                 The attached binary file, with the ibd extension, must be in the same directory that .imzML files.
+      file_path: A list of the absolute paths of the files to be processed is required. 
+                 Alternatively, a single filename with the 'txt' extension containing the absolute paths of all files to be processed is acceptable. 
+                 In file.txt, lines are considered comments if they begin with the '#' character or the blank character.
+                 Only files in 'imzML' format are recognized.
+                 The attached binary file, with the 'ibd' extension, must be in the same directory that 'imzML' files.
          params: List of parameters given in Step 1.
-       initMass: Initial mass to consider.
-      finalMass: Final   mass to consider.
-         pxList: list of pixels. First pixel=1. By default everyone.
+       initMass: Initial mass to consider. By default, the minimum value from the entire range of masses is used.
+      finalMass: Final   mass to consider. By default, the maximum value from the entire range of masses is used.
+         pxList: List of pixels. First pixel=1. By default everyone.
        nThreads: Number of threads for parallel processing (if zero, nThreads=maxCores-1)
+  imzMLChecksum: If the binary file checksum must be verified, it can be disabled for convenice with really big files.
+  fixBrokenUUID: Set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 
   return a list: 
     peakMatrix: Matrix of peak (centroids) rows = pixels, columns = intensity of each pixel.
           mass: Vector with the masses associated with each column of peakMatrix.
 massResolution: Vector with the mass resolution achieved in the peak matrix (mz/delta_mz).
  pixelsSupport: Vector with the number of pixels in each column with non-zero intensity.
- imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
- fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
+   coordinates: Matrix with pixel coordinates (X/Y).
+  pixelsSample: Vector with the number of pixels in each of the samples. In the peakMatrix and coordinates they appear in the same order.
 ```
+
+
+### **Examples of iCone usage.**
+> [iCone_Workshop](https://github.com/EdelCastillo/iCone/blob/main/iConeWorkshop.md "iCone_Workshop")
+
 ### **complementary functions.**
 
 > lst <-**getPixelGaussians**(imzML_file_path, params, initMass, finalMass, pixel)
@@ -209,4 +218,3 @@ Observation: very rudimentary.
     peakMatrix: information returned by the getPeakMatrix() function. 
             mz: centroid to be visualized (Da)
 ```
-

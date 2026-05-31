@@ -5,9 +5,9 @@
 \title{Presents an image with the Gaussians from a spectra fragment,
 along with the curve resulting from the sum of all of them (in red).
 The blue circles indicate the original intensity data to be adjusted.
-The drawInfo parameters come from rGetPeakMatrix()}
+The drawInfo parameters come from getPixelGaussians() or getGaussiansFromSpectrum()}
 \usage{
-rPlotGaussianSpectrum(drawInfo, minMass = 0, maxMass = 0)
+rPlotGaussianSpectrum(drawInfo, minMass = 0, maxMass = 0, sum = TRUE)
 }
 \arguments{
 \item{drawInfo$gaussians:}{matrix
@@ -17,7 +17,9 @@ column 3 -> factor associated with each Gaussian.}
 
 \item{drawInfo$mass:}{vector (in Daltons).}
 
-\item{drawInfo$intensity:}{vector of intensities}
+\item{drawInfo$intensity:}{vector of intensities. It can be null or non-existent.}
+
+\item{sum:}{if TRUE, the sum of Gaussian is displayed.}
 }
 \value{
 -1 if KO; 0 if OK
@@ -26,5 +28,5 @@ column 3 -> factor associated with each Gaussian.}
 Presents an image with the Gaussians from a spectra fragment,
 along with the curve resulting from the sum of all of them (in red).
 The blue circles indicate the original intensity data to be adjusted.
-The drawInfo parameters come from rGetPeakMatrix()
+The drawInfo parameters come from getPixelGaussians() or getGaussiansFromSpectrum()
 }

@@ -7,8 +7,8 @@
 getGaussiansFromSpectrum(
   intensity,
   mz,
-  lowMass = 0,
-  highMass = 0,
+  initMass = 0,
+  finalMass = 0,
   SNR = 3,
   noiseMethod = "estnoise_mad"
 )
@@ -18,9 +18,9 @@ getGaussiansFromSpectrum(
 
 \item{mz:}{vector with mass/charge information}
 
-\item{lowMass:}{lower mass to consider}
+\item{initMass:}{lower mass to consider}
 
-\item{highMass:}{higher mass to consider}
+\item{finalMass:}{higher mass to consider}
 
 \item{SNR:}{signal-to-noise ratio}
 

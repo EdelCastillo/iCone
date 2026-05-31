@@ -7,8 +7,8 @@
 getAverageGaussianSpectrum(
   data_file,
   params,
-  lowMass = 0,
-  highMass = 0,
+  initMass = 0,
+  finalMass = 0,
   pxList = c(0),
   overSampling = 4,
   nThreads = 0,
@@ -23,9 +23,9 @@ getAverageGaussianSpectrum(
 
 \item{data_file:}{absolute reference to the file with the imzML extension.}
 
-\item{lowMass:}{lower mass to consider}
+\item{initMass:}{lower mass to consider}
 
-\item{highMass:}{higher mass to consider}
+\item{finalMass:}{higher mass to consider}
 
 \item{pxList:}{list of pixels. First pixel=1. By default everyone.}
 

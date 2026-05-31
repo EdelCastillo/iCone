@@ -184,6 +184,10 @@ rawToGaussiansR <- function(ibdFname, imzML, params, mzLow, mzHigh, pxList, nThr
     .Call('_iCone_rawToGaussiansR', PACKAGE = 'iCone', ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads)
 }
 
+rGetBasicInfo <- function(ibdFname, imzML, pxList) {
+    .Call('_iCone_rGetBasicInfo', PACKAGE = 'iCone', ibdFname, imzML, pxList)
+}
+
 rGetAverageGaussianSpectrum <- function(ibdFname, imzML, params, mzLow, mzHigh, pxList, overSampling, nThreads) {
     .Call('_iCone_rGetAverageGaussianSpectrum', PACKAGE = 'iCone', ibdFname, imzML, params, mzLow, mzHigh, pxList, overSampling, nThreads)
 }

@@ -134,16 +134,16 @@ private:
   //input info to the constructor.
   bool m_continuous;
   int 
-  m_nThreads,
-  m_pxSupport,
-  m_maxMzLength,
-  *m_pxList,
-  m_pxMax,
-  m_pxMin;
-  float     
-  m_mzLow,
-  m_mzHigh,
-  m_SNR;
+    m_nThreads,
+    m_pxSupport,
+    m_maxMzLength,
+    *m_pxList,
+    m_pxMax,
+    m_pxMin;
+    float     
+    m_mzLow,
+    m_mzHigh,
+    m_SNR;
   double     
     m_maxMassResolution;  
   

@@ -263,6 +263,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rGetBasicInfo
+List rGetBasicInfo(const char* ibdFname, Rcpp::List imzML, Rcpp::NumericVector pxList);
+RcppExport SEXP _iCone_rGetBasicInfo(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP pxListSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type ibdFname(ibdFnameSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type imzML(imzMLSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pxList(pxListSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetBasicInfo(ibdFname, imzML, pxList));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rGetAverageGaussianSpectrum
 List rGetAverageGaussianSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, float overSampling, int nThreads);
 RcppExport SEXP _iCone_rGetAverageGaussianSpectrum(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pxListSEXP, SEXP overSamplingSEXP, SEXP nThreadsSEXP) {
@@ -318,6 +331,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_iCone_rGetPixelGaussians", (DL_FUNC) &_iCone_rGetPixelGaussians, 6},
     {"_iCone_peakMatrixR", (DL_FUNC) &_iCone_peakMatrixR, 5},
     {"_iCone_rawToGaussiansR", (DL_FUNC) &_iCone_rawToGaussiansR, 7},
+    {"_iCone_rGetBasicInfo", (DL_FUNC) &_iCone_rGetBasicInfo, 3},
     {"_iCone_rGetAverageGaussianSpectrum", (DL_FUNC) &_iCone_rGetAverageGaussianSpectrum, 8},
     {"_iCone_rGetAverageSpectrum", (DL_FUNC) &_iCone_rGetAverageSpectrum, 7},
     {NULL, NULL, 0}
