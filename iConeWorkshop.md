@@ -1,0 +1,145 @@
+---
+title: "iCone_Workshop"
+author: "Esteban del Castillo"
+date: 'may, 2026'
+output: html_document
+---
+
+## Demo data
+> This R markdown script show the fundamentals of iCone data processing. The demo MSI data used here can be obtained in the link 
+[Raw_data](https://doi.org/10.34810/data1744)
+
+> After the download, the following files should appear:
+
+For a mass resolution of 30k:
+```
+    231211_Au_P_MBr_cblm_30k.imzML
+    231211_Au_P_MBr_cblm_30k.ibd 
+```
+For a mass resolution of 60k:
+```
+    231211_Au_P_MBr_cblm_60k.imzML
+    231211_Au_P_MBr_cblm_60k.ibd 
+```
+For a mass resolution of 120k:
+```
+    231211_Au_P_MBr_cblm_120k.imzML 
+    231211_Au_P_MBr_cblm_120k.ibd
+```
+> From now on we will assume that they have been copied to the /home/MSI/ folder.
+
+## Obtaining the peak matrix
+
+> The first step is to create a list with the desired parameters. 
+> For example, to obtain the peak matrix corresponding to the 30k sample, with a signal-to-noise ratio of 3, using the 'estnoise_mad' algorithm for noise estimation, 
+with a mass resolution of 30k, a minimum number of supporting pixels of 10%, and a standard deviation of 3 (defect) to consider peaks as overlapping (those that are closest together).
+```
+> params30 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "massResolution"=30000)
+```
+
+> The second step is to call the getPeakMatrix() function.
+```
+> pk30k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_30k.imzML", params30);
+> #It returns a peak matrix assuming the maximum mass range, for all pixels in the sample and making use of all available CPU cores (minus one).
+>
+> #Alternatively, we can limit the mass range. For example, between 500 and 1000 Da:
+> pk30k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_30k.imzML", params30, initMass=500, finalMass=1000);
+>
+> #It is also possible to pass a list with the pixels of interest:
+> pxList=c(1:100, 200,300, 400:500)
+> pk30k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_30k.imzML", params30, initMass=500, finalMass=1000, pxList);
+```
+## Data structure reported by iCone.
+> The following lines detail the information reported by the getPeakMatrix() function.
+
+### peakMatrix
+Matrix of peak (rows = pixels, columns = intensity of each pixel)
+```
+pk30k$peakMatrix[1:10, 1:10] #matrix with the intensities of first ten pixels and the first ten centroids
+```
+
+### mass (centroids)
+Vector with the masses associated with each column of peakMatrix.
+```
+pk30k$mass[1:10] #vector with the m/z (Da) of the first ten centroids.
+```
+
+### massResolution
+Mass resolution associated with each mass (mz/delta_mz).
+```
+pk30k$massResolution[1:10] #vector with the mass resolutions of the first ten centroids.
+```
+
+### pixelsSupport
+Vector with the number of pixels in each column with non-zero intensity. 
+```
+pk30k$pixelsSupport[1:10] #vector with the number of pixels with non-zero intensity for the first ten centroids.
+```
+
+### coordinates
+Matrix with pixel coordinates (x/y).
+```
+pk30k$coordinates[1:10,] #two-dimensional matrix with x/y position information for the first ten pixels.
+```
+
+### pixelSample
+Vector with the number of pixels in each of the samples. In the peakMatrix and coordinates they appear in the same order.
+```
+pk30k$pixelsSample  
+```
+
+### pixelSize_um
+Vector with the size of the pixels (spatial resolution) in micrometers.
+```
+pk30k$pixelSize_um
+```
+
+## Accuracy of the centroids
+> To determine the accuracy of the m/z measurement reported by the getPeakMatrix() function, the results are compared with the same tissue samples analyzed at higher resolutions. Specifically, samples with 30k and 60k resolutions are compared with samples analyzed at 120k resolution.
+
+### obtaining the peak matrices
+```
+> params30 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "massResolution"=30000)
+> pk30k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_30k.imzML", params30);
+
+> params60 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "massResolution"=60000)
+> pk60k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_60k.imzML", params60);
+
+> params120 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "massResolution"=120000)
+> pk120k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_120k.imzML", params120);
+```
+### Accuracy
+
+> To compare the results, we use the `statisticalQuality()` function. It reports statistical values ​​regarding the deviation between the two m/z vectors being compared. This deviation is determined from the nearest centroids in the high-resolution sample to those in the low-resolution sample.
+```
+> statisticalQuality() arguments: 
+> mzRef       is the high-resolution centroid vector.
+> mzTest      is the low-resolution centroid vector.
+> resolution  indicates the minimum distance for the result to be considered a false positive (expressed in ppm).
+
+> statisticalQuality() report: 
+> refSize   size of the high-resolution centroid vector.
+> testSize  size of the low-resolution centroid vector.
+> mean      mean of the deviations between centroids.
+> sigma     standard deviation of the deviations between centroids.
+> median    median of the deviations between centroids.
+> repes     number of low-resolution centroids that share a common high-resolution centroid.
+```
+> Use
+```
+> statisticalQuality(pk120k$mass, pk30k$mass, 33.33)
+refSize=9439  testSize=1010     mean=3.293  sigma=3.917  median=1.763  repes:1 (0.1%)
+
+> statisticalQuality(pk120k$mass, pk30k$mass, 16.66)
+ refSize=9439  testSize=1545     mean=1.521  sigma=2.220  median=0.718  repes:44 (2.8%)
+``` 
+### Summary
+To compare, for example, the 30k sample with the 120k sample, we will do the following:
+```
+> params30 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "massResolution"=30000)
+> pk30k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_30k.imzML", params30);
+> params120 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "massResolution"=120000)
+> pk120k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_120k.imzML", params120);
+> statisticalQuality(pk120k$mass, pk30k$mass, 33.33)
+  refSize=9439  testSize=1010     mean=3.293  sigma=3.917  median=1.763  repes:1 (0.1%)
+```
