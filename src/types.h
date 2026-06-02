@@ -19,7 +19,7 @@
  **************************************************************************/
 #ifndef ICONE_TYPES
 #define ICONE_TYPES
-
+  
 #include <thread>
 #include <mutex>
 #include "GMM.h"
