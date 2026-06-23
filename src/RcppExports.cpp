@@ -231,27 +231,62 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// peakMatrixR
-List peakMatrixR(int totalPixels, Rcpp::List params, float mzLow, float mzHigh, int nThreads);
-RcppExport SEXP _iCone_peakMatrixR(SEXP totalPixelsSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP nThreadsSEXP) {
+// rGetMetaDataFromFile
+List rGetMetaDataFromFile(const char* file);
+RcppExport SEXP _iCone_rGetMetaDataFromFile(SEXP fileSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type totalPixels(totalPixelsSEXP);
+    Rcpp::traits::input_parameter< const char* >::type file(fileSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetMetaDataFromFile(file));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rGetCoordinatesFromFile
+NumericMatrix rGetCoordinatesFromFile(const char* fileName);
+RcppExport SEXP _iCone_rGetCoordinatesFromFile(SEXP fileNameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type fileName(fileNameSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetCoordinatesFromFile(fileName));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rGetColumFromFile
+NumericVector rGetColumFromFile(const char* file, int column);
+RcppExport SEXP _iCone_rGetColumFromFile(SEXP fileSEXP, SEXP columnSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type file(fileSEXP);
+    Rcpp::traits::input_parameter< int >::type column(columnSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetColumFromFile(file, column));
+    return rcpp_result_gen;
+END_RCPP
+}
+// peakMatrixR
+List peakMatrixR(Rcpp::String baseDir, Rcpp::List params, float mzLow, float mzHigh, int nThreads);
+RcppExport SEXP _iCone_peakMatrixR(SEXP baseDirSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP nThreadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::String >::type baseDir(baseDirSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
     Rcpp::traits::input_parameter< float >::type mzLow(mzLowSEXP);
     Rcpp::traits::input_parameter< float >::type mzHigh(mzHighSEXP);
     Rcpp::traits::input_parameter< int >::type nThreads(nThreadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(peakMatrixR(totalPixels, params, mzLow, mzHigh, nThreads));
+    rcpp_result_gen = Rcpp::wrap(peakMatrixR(baseDir, params, mzLow, mzHigh, nThreads));
     return rcpp_result_gen;
 END_RCPP
 }
 // rawToGaussiansR
-int rawToGaussiansR(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, int nThreads);
-RcppExport SEXP _iCone_rawToGaussiansR(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pxListSEXP, SEXP nThreadsSEXP) {
+int rawToGaussiansR(Rcpp::String baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, int nThreads);
+RcppExport SEXP _iCone_rawToGaussiansR(SEXP baseDirSEXP, SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pxListSEXP, SEXP nThreadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::String >::type baseDir(baseDirSEXP);
     Rcpp::traits::input_parameter< const char* >::type ibdFname(ibdFnameSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type imzML(imzMLSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
@@ -259,7 +294,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< float >::type mzHigh(mzHighSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pxList(pxListSEXP);
     Rcpp::traits::input_parameter< int >::type nThreads(nThreadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(rawToGaussiansR(ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads));
+    rcpp_result_gen = Rcpp::wrap(rawToGaussiansR(baseDir, ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -311,6 +346,41 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rSaveMassRange
+bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh);
+RcppExport SEXP _iCone_rSaveMassRange(SEXP fileNameSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type fileName(fileNameSEXP);
+    Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
+    Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
+    rcpp_result_gen = Rcpp::wrap(rSaveMassRange(fileName, mzLow, mzHigh));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rLoadMassRange
+NumericVector rLoadMassRange(const char* fileName);
+RcppExport SEXP _iCone_rLoadMassRange(SEXP fileNameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type fileName(fileNameSEXP);
+    rcpp_result_gen = Rcpp::wrap(rLoadMassRange(fileName));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rGetDirectory
+CharacterVector rGetDirectory(const char* path);
+RcppExport SEXP _iCone_rGetDirectory(SEXP pathSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type path(pathSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetDirectory(path));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_iCone_rGetGaussiansFromSpectrum", (DL_FUNC) &_iCone_rGetGaussiansFromSpectrum, 5},
@@ -329,11 +399,17 @@ static const R_CallMethodDef CallEntries[] = {
     {"_iCone_CimzMLParse", (DL_FUNC) &_iCone_CimzMLParse, 1},
     {"_iCone_CimzMLStore", (DL_FUNC) &_iCone_CimzMLStore, 3},
     {"_iCone_rGetPixelGaussians", (DL_FUNC) &_iCone_rGetPixelGaussians, 6},
+    {"_iCone_rGetMetaDataFromFile", (DL_FUNC) &_iCone_rGetMetaDataFromFile, 1},
+    {"_iCone_rGetCoordinatesFromFile", (DL_FUNC) &_iCone_rGetCoordinatesFromFile, 1},
+    {"_iCone_rGetColumFromFile", (DL_FUNC) &_iCone_rGetColumFromFile, 2},
     {"_iCone_peakMatrixR", (DL_FUNC) &_iCone_peakMatrixR, 5},
-    {"_iCone_rawToGaussiansR", (DL_FUNC) &_iCone_rawToGaussiansR, 7},
+    {"_iCone_rawToGaussiansR", (DL_FUNC) &_iCone_rawToGaussiansR, 8},
     {"_iCone_rGetBasicInfo", (DL_FUNC) &_iCone_rGetBasicInfo, 3},
     {"_iCone_rGetAverageGaussianSpectrum", (DL_FUNC) &_iCone_rGetAverageGaussianSpectrum, 8},
     {"_iCone_rGetAverageSpectrum", (DL_FUNC) &_iCone_rGetAverageSpectrum, 7},
+    {"_iCone_rSaveMassRange", (DL_FUNC) &_iCone_rSaveMassRange, 3},
+    {"_iCone_rLoadMassRange", (DL_FUNC) &_iCone_rLoadMassRange, 1},
+    {"_iCone_rGetDirectory", (DL_FUNC) &_iCone_rGetDirectory, 1},
     {NULL, NULL, 0}
 };
 

@@ -62,7 +62,7 @@
       int     nGaussians;   //Gaussians in range
     }MASS_RANGE;
     
-    
+   
     typedef struct
     {
       int low, high;        //low and high indices to simple peaks that make up a compound peak.

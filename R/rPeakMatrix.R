@@ -60,7 +60,7 @@ getPeakMatrix<-function(data_file,
   {
     stop("No information is provided about the files to be processed.\n")
   }
-  
+
   #parameters control 
   if(!(exists("SNR", where=params)))
   {
@@ -138,9 +138,6 @@ getPeakMatrix<-function(data_file,
     }
   }
   
-  #Deletion of temporary files, if any.
-  if(file.exists("tmpGaussians.bin")) file.remove("tmpGaussians.bin");
-  if(file.exists("tmpPixelsCoordinates.bin")) file.remove("tmpPixelsCoordinates.bin");
   
   nSamples=length(samples);
   if(nSamples<=0)
@@ -153,12 +150,28 @@ getPeakMatrix<-function(data_file,
     cat("Warning: the maximum number of samples allowed has been reached. It is limited to 50.\n)");
     nSamples=50;
   }
+  
+  baseDir=rGetDirectory(data_file[1])
+  
+  fileExtension <- unlist(strsplit(basename(data_file[1]), split = "\\."))
+  fileExtension <- as.character(fileExtension[length(fileExtension)])
+  if( fileExtension != "bin")
+  {
+    #Deletion of temporary files, if any. 
+    #These files should not contain any content since they are cumulative.
+    fileA=paste0(baseDir, "tmpGaussians.bin")
+    if(file.exists(fileA)) file.remove(fileA)
+    fileB=paste0(baseDir, "tmpPixelsCoordinates.bin")
+    if(file.exists(fileB)) file.remove(fileB)
+  }
+  
   minMass=1e32
   maxMass=0
   lowMz=0
   highMz=0
   totalSamples=0
   pixelSize=c()
+  hit=FALSE;
   
   for( sample in 1 : nSamples)
     {
@@ -197,16 +210,32 @@ getPeakMatrix<-function(data_file,
       if(highMz>maxMass) maxMass=highMz
       
      #imzML file to Gaussians (for each sample).
-     nPixels=rawToGaussiansR(file, in_img$data$imzML, params, lowMz, highMz, pxList-1, nThreads);
+     nPixels=rawToGaussiansR(baseDir, file, in_img$data$imzML, params, lowMz, highMz, pxList-1, nThreads);
      totalPixels=totalPixels+nPixels;
      totalSamples=totalSamples+1;
+     hit=TRUE;
+     
+     fileA=paste0(baseDir, "tmpMassRange.bin")
+     rSaveMassRange(fileA, minMass, maxMass);
+     
+     gc();
+     rm(in_img, basicInfo)
     }
-  else
-  {
-    cat(sprintf("The file extension must be imzML.\n"))
-  }
-  }
-  
+  else if (fileExtension == "bin")
+    {
+    fileA=paste0(baseDir, "tmpGaussians.bin")
+    cat(sprintf("The information contained in the %s file will be used.\nThis eliminates phase 1 of the processing.\n", fileA))
+    hit=TRUE;
+    totalSamples=1;
+    break;
+    }
+  else 
+   {
+    cat(sprintf("The file extension must be imzML or bin.\n"))
+     hit=FALSE;
+    }
+}
+  gc()  
   if(totalSamples==0) 
   {
     cat("warning: there is no valid file.\n")
@@ -216,13 +245,42 @@ getPeakMatrix<-function(data_file,
   {
     cat(sprintf("\t\t\tunified mass range(Da):%.4f to %.4f\n", minMass, maxMass))
   }
+  if(!hit) return(0);
   
+  #rm(list = ls())
+  gc()
+#  minMass=120; maxMass=1800;
   #Gaussians to peak matrix (for all samples)
-  peakMatrix=peakMatrixR(totalPixels, params, minMass, maxMass, nThreads);
+  fileA=paste0(baseDir, "tmpMassRange.bin")
+  massRange=rLoadMassRange(fileA);
+  peakMatrix=peakMatrixR(baseDir, params, massRange[1], massRange[2], nThreads);
 #  peakMatrix=c(peakMatrix, "pixel_size_um"=pixelSize)
   peakMatrix<-c(peakMatrix, list("pixelSize_um"=pixelSize))
-
-  gc()  
+  
+  gc() 
+  
+  #The peak array is captured in pzMatrix object from the tmpPeakMatrix.bin file.
+  fileA=paste0(baseDir, "tmpPeakMatrix.bin")
+  metaInfo=rGetMetaDataFromFile(fileA)
+  pkMatrix=matrix(ncol=metaInfo$nIons, nrow=metaInfo$totalPx);
+  mass=vector(length = metaInfo$nIons)
+  massResolution=vector(length = metaInfo$nIons)
+  pxSupport=vector(length = metaInfo$nIons)
+  
+  
+  for(ion in 1:metaInfo$nIons)
+  {
+    tmpIon=rGetColumFromFile(fileA, ion)
+    mass[ion]=tmpIon[1];
+    massResolution[ion]=tmpIon[2];
+    pxSupport[ion]=tmpIon[3];
+    pkMatrix[,ion]=tmpIon[4:length(tmpIon)]
+  }
+  
+  fileA=paste0(baseDir, "tmpPixelsCoordinates.bin")
+  coordinates=rGetCoordinatesFromFile(fileA);
+  peakMatrix <- list("peakMatrix" = pkMatrix, "mass" = mass, "massResolution" = massResolution,
+                   "pixelsSupport"=pxSupport, "coordinates"=coordinates, "pixelsSample"=metaInfo$pixelsSample)  
   pt<-proc.time() - pt
   display_processing_time(pt, "Data processing time")
   return(peakMatrix)
@@ -533,6 +591,18 @@ getGaussiansFromSpectrum<-function(
     return(Gauss)
 }
 
+#' @export
+getPeakMatrixFromFile<-function(data_file, ion)
+{
+col=rGetColumFromFile(data_file, ion);
+return(col)
+}
+
+#' @export
+getMetaDataFromFile<-function(data_file)
+{
+  return(rGetMetaDataFromFile(data_file));
+}
 
 #//////////////////////////////////////////////////////////////
 #' uuid.

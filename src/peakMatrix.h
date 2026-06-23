@@ -70,7 +70,7 @@ public:
   //peakMatrix: Matrix of centroids and the intensity associated with each pixel.
   //massVector: The mz associated with each column of the peakMatrix.
   //pixelsSupport: Number of pixels with intensity > 0.
-  List massRangeToCentroids(MASS_RANGE massRange);
+  List massRangeToCentroids(char *baseDir, MASS_RANGE massRange);
   
   //getCentroidsIntoRange()
   //Extracts the existing Gaussians within a mass range from the information in m_gaussians_p.

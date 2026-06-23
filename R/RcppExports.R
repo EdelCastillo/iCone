@@ -170,18 +170,50 @@ rGetPixelGaussians <- function(ibdFname, imzML, params, mzLow, mzHigh, pixel) {
     .Call('_iCone_rGetPixelGaussians', PACKAGE = 'iCone', ibdFname, imzML, params, mzLow, mzHigh, pixel)
 }
 
+#' @name rGetMetaDataFromFile
+#' @title returns generic information about the peak matrix located in a file.
+#' @param file -> file name with peak matrix
+#' @return a list:
+#'   nSamples     -> number of samples analyzed.
+#'   totalPx      -> total number of pixels (cumulative of each sample).
+#'   nIons        -> number of columns in the matrix.
+#'   pixelsSample -> vector with the pixels in each sample.
+NULL
+
+#' @name rGetColumFromFile()
+NULL
+
 #'
 NULL
 
-peakMatrixR <- function(totalPixels, params, mzLow, mzHigh, nThreads) {
-    .Call('_iCone_peakMatrixR', PACKAGE = 'iCone', totalPixels, params, mzLow, mzHigh, nThreads)
+rGetMetaDataFromFile <- function(file) {
+    .Call('_iCone_rGetMetaDataFromFile', PACKAGE = 'iCone', file)
+}
+
+#' @name rGetCoordinatesFromFile()
+#' @title returns a matrix with the coordinates of all pixels (X/Y).
+#' If there are multiple samples, they appear sequentially; that is, the matrix has as many rows 
+#' as the cumulative number of pixels in each sample and two columns.
+#' @param file -> file name with peak matrix
+#' @return a matrix with the coordinates (X/Y) of all pixels.
+#' 
+rGetCoordinatesFromFile <- function(fileName) {
+    .Call('_iCone_rGetCoordinatesFromFile', PACKAGE = 'iCone', fileName)
+}
+
+rGetColumFromFile <- function(file, column) {
+    .Call('_iCone_rGetColumFromFile', PACKAGE = 'iCone', file, column)
+}
+
+peakMatrixR <- function(baseDir, params, mzLow, mzHigh, nThreads) {
+    .Call('_iCone_peakMatrixR', PACKAGE = 'iCone', baseDir, params, mzLow, mzHigh, nThreads)
 }
 
 #'
 NULL
 
-rawToGaussiansR <- function(ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads) {
-    .Call('_iCone_rawToGaussiansR', PACKAGE = 'iCone', ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads)
+rawToGaussiansR <- function(baseDir, ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads) {
+    .Call('_iCone_rawToGaussiansR', PACKAGE = 'iCone', baseDir, ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads)
 }
 
 rGetBasicInfo <- function(ibdFname, imzML, pxList) {
@@ -194,5 +226,17 @@ rGetAverageGaussianSpectrum <- function(ibdFname, imzML, params, mzLow, mzHigh, 
 
 rGetAverageSpectrum <- function(ibdFname, imzML, params, mzLow, mzHigh, pxList, overSampling) {
     .Call('_iCone_rGetAverageSpectrum', PACKAGE = 'iCone', ibdFname, imzML, params, mzLow, mzHigh, pxList, overSampling)
+}
+
+rSaveMassRange <- function(fileName, mzLow, mzHigh) {
+    .Call('_iCone_rSaveMassRange', PACKAGE = 'iCone', fileName, mzLow, mzHigh)
+}
+
+rLoadMassRange <- function(fileName) {
+    .Call('_iCone_rLoadMassRange', PACKAGE = 'iCone', fileName)
+}
+
+rGetDirectory <- function(path) {
+    .Call('_iCone_rGetDirectory', PACKAGE = 'iCone', path)
 }
 

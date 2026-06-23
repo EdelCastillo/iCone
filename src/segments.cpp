@@ -21,9 +21,9 @@
 //constructor
 //class: extracts mass segments where overlapping Gaussians exist. Over all pixels.
 //The source information is located in a temporary file.
-Segments::Segments(int totalPixels, float massResolution, float mzLow, float mzHigh, float linkedPeaks)
+Segments::Segments(float massResolution, float mzLow, float mzHigh, float linkedPeaks)
 {
-  m_totalPixels=totalPixels;
+  m_totalPixels=0; //It is set in the loadGaussians() function.
   m_massResolution=massResolution;
   m_mzHigh=mzHigh;
   m_mzLow=mzLow;
@@ -41,9 +41,10 @@ Segments::~Segments()
     {
       if(m_gaussians_p[i].gauss_p) delete [] m_gaussians_p[i].gauss_p;
     }
-  delete m_gaussians_p;
+  delete []m_gaussians_p;
   }
   if(m_massRange_p) delete [] m_massRange_p;
+  //printf("~Segments\n");
 }
 
 //getMassRanges()
@@ -265,23 +266,44 @@ int Segments::getMassRanges(float* linkedPeak_p)
 //fileName: temporary file name
 //totalPixels: total pixels in the file
 //Returns false if the load failed
-int Segments::loadGaussians(char *fileName, int totalPixels)
+int Segments::loadGaussians(char *fileName)
 {
   std::fstream fp;
   fp.open(fileName, std::fstream::in | std::ios::binary);
   if(!fp.is_open())
   {
     char txt[200];
-    sprintf(txt, "Error: %s file could not be opened\n.", fileName);
+    sprintf(txt, "Error: %s file could not be opened..\n", fileName);
     throw std::runtime_error(txt);
   }
   int nSamplePixels, nPixels, nPxGauss;
   int gaussSize=3*sizeof(double);
   bool hit=true;
 
-  m_gaussians_p=new GAUSS_SP[totalPixels]; //array of structs
-  for(int i=0; i<totalPixels; i++) {m_gaussians_p[i].gauss_p=0; m_gaussians_p[i].size=0;}  
-int pxTotal=0;
+  int pxTotal=0, pxIndex=0, nSamples=0;
+  int pixelsSample[MAX_SAMPLES];
+  while(true) //first reading to obtain information.
+  {
+    fp.read((char*)&nSamplePixels, sizeof(int)); //#pixels into the sample
+    if(fp.eof()) break;
+    pixelsSample[nSamples++]=nSamplePixels;
+    pxTotal+=nSamplePixels;
+    for(int pxSample=0; pxSample<nSamplePixels; pxSample++) //for each pixel of the sample 
+    {
+      fp.read((char*)&nPxGauss, sizeof(int)); //#gaussianas into the pixel
+      if(fp.eof()) break;
+      fp.seekg(gaussSize*nPxGauss, std::ios_base::cur); //to next pixel
+    }
+  }
+
+  fp.close(); //If you exit with an error, you need to close the file.
+  
+  //second reading to obtain the coordinates.
+  fp.open(fileName, std::fstream::in | std::ios::binary); //reopen
+  
+  m_gaussians_p=new GAUSS_SP[pxTotal]; //array of structs
+  for(int i=0; i<pxTotal; i++) {m_gaussians_p[i].gauss_p=0; m_gaussians_p[i].size=0;}  
+
   while(!fp.eof())
   {
     fp.read((char*)&nSamplePixels, sizeof(int)); //#pixels of sample
@@ -290,11 +312,11 @@ int pxTotal=0;
     {
       fp.read((char*)&nPxGauss, sizeof(int)); //#gaussianas into the pixel
       if(fp.eof()) break;
-      m_gaussians_p[pxTotal].size=nPxGauss;
-      if(nPxGauss==0) continue;
+      m_gaussians_p[pxIndex].size=nPxGauss;
+      if(nPxGauss==0) {pxIndex++; continue;}
       
-      m_gaussians_p[pxTotal].gauss_p=new GAUSS_PARAMS[nPxGauss]; //memory
-      fp.read((char*)m_gaussians_p[pxTotal].gauss_p, nPxGauss*gaussSize ); //load
+      m_gaussians_p[pxIndex].gauss_p=new GAUSS_PARAMS[nPxGauss]; //memory
+      fp.read((char*)m_gaussians_p[pxIndex].gauss_p, nPxGauss*gaussSize ); //load
       
       if(fp.eof() || fp.fail() || fp.bad()) //boundary control
       {
@@ -305,11 +327,13 @@ int pxTotal=0;
       }
     
     if(fp.eof() || !hit) break;
-    pxTotal++;
+    pxIndex++;
     }
   }
     fp.close();
-  return pxTotal;
+//  printf("%d %d\n", pxTotal, pxIndex);
+  m_totalPixels=pxIndex;
+  return pxIndex;
 }
 
 

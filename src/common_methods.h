@@ -25,6 +25,7 @@
 #include <numeric>      // std::iota
 #include <algorithm>    // std::sort, std::stable_sort
 #include <string>
+#include <string.h>
 #include "types.h"
 
 using namespace std; 
@@ -116,6 +117,23 @@ public:
   
   //variance of an array of floats.
   float varF(float *prob, float *data, int size, float *mean_p=NULL);
+
+  //Extracts the file extension from a filename.
+  //Returns true if the extension is not found.
+  bool getFileExtension(const char *fileName, char* extension);
+    
+  //Extracts the file name from a path, includes the possible extension.
+  //Returns true if fileName is null.
+  bool getFileNameWithExt(const char *fileName, char* name);
+
+  //Extracts the file name from a path, excludes the possible extension.
+  //Returns true if fileName is null.
+  bool getFileNameWithoutExt(const char *fileName, char* name);
+
+  //Extracts the directory from a path.
+  //Returns true if fileName is null.
+  bool getFileNameDirectory(const char *fileName, char* directory);
+    
 };
   
 #endif

@@ -21,6 +21,160 @@
 int  gProcSegments, gVez; //observers.
 std::mutex gMutex;
 
+/// R METHODS ////////////////////////////////////////////////////////////////////////
+
+//' @name rGetMetaDataFromFile
+//' @title returns generic information about the peak matrix located in a file.
+//' @param file -> file name with peak matrix
+//' @return a list:
+//'   nSamples     -> number of samples analyzed.
+//'   totalPx      -> total number of pixels (cumulative of each sample).
+//'   nIons        -> number of columns in the matrix.
+//'   pixelsSample -> vector with the pixels in each sample.
+
+// [[Rcpp::export]]
+List rGetMetaDataFromFile(const char* file)
+{
+  std::fstream fp;
+  std::streampos pos;
+  int nSamples, totalPx, nIons, colSize;
+  
+  fp.open(file, std::fstream::in | std::ios::binary);
+  if(!fp.is_open())
+  {
+    char txt[200];
+    sprintf(txt, "Error: The internal file %s could not be created.\n The peak matrix cannot be saved.\n", file);
+    throw std::runtime_error(txt);
+  }
+  int px;
+  fp.read((char*)&nSamples, sizeof(int)); //samples number
+  fp.read((char*)&totalPx,  sizeof(int)); //samples number
+  fp.read((char*)&nIons,    sizeof(int)); //samples number
+  
+  //printf("%d %d %d\n", nSamples, totalPx, nIons);
+  NumericVector pxSample(nSamples);
+  for(int i=0; i<nSamples; i++)
+  {
+    fp.read((char*)&px, sizeof(int)); //samples number
+    //printf("%d\n", px);
+    pxSample[i]=px;
+  }
+  fp.close();
+  List ret=List::create(Named("nSamples")=nSamples, Named("totalPx")=totalPx, Named("nIons")=nIons, 
+                        Named("pixelsSample")=pxSample);
+  return ret;
+}
+
+//' @name rGetCoordinatesFromFile()
+//' @title returns a matrix with the coordinates of all pixels (X/Y).
+//' If there are multiple samples, they appear sequentially; that is, the matrix has as many rows 
+//' as the cumulative number of pixels in each sample and two columns.
+//' @param file -> file name with peak matrix
+//' @return a matrix with the coordinates (X/Y) of all pixels.
+//' 
+// [[Rcpp::export]]
+NumericMatrix rGetCoordinatesFromFile(const char* fileName)
+{
+  std::fstream fp;
+  fp.open(fileName, std::fstream::in | std::ios::binary);
+  if(!fp.is_open())
+  {
+    char txt[200];
+    sprintf(txt, "Error: %s file could not be opened\n", fileName);
+    throw std::runtime_error(txt);
+  }
+  int nSamples=0, nSamplePixels, nPixels, nPxGauss, coordSize=2*sizeof(int);
+  bool hit=true;
+  int pxTotal=0, pxIndex=0;
+  int pixelsSample[MAX_SAMPLES];
+  while(true) //first reading to obtain information.
+  {
+    fp.read((char*)&nSamplePixels, sizeof(int)); //#pixels into the sample
+    if(fp.eof()) break;
+    fp.seekg((std::streampos)nSamplePixels*2*sizeof(int), std::ios_base::cur);
+    
+    pixelsSample[nSamples++]=nSamplePixels;
+    pxTotal+=nSamplePixels;
+  }
+  
+  NumericMatrix pxCoord(pxTotal, 2);
+  fp.close(); //If you exit with an error, you need to close the file.
+  
+  //second reading to obtain the coordinates.
+  fp.open(fileName, std::fstream::in | std::ios::binary); //reopen
+  
+  int A,B;
+  for(int sample=0; sample<nSamples; sample++) //for all samples
+  {
+    fp.read((char*)&nPixels, sizeof(int)); //#pixels into the sample
+    for(int pxSample=0; pxSample<nPixels; pxSample++) //for each pixel into the sample
+      {
+      fp.read((char*)&A, sizeof(int)); //X coordinate
+      fp.read((char*)&B, sizeof(int)); //Y coordinate
+      pxCoord(pxIndex,0)  =A;
+      pxCoord(pxIndex++,1)=B;
+      if(fp.fail() || fp.bad()) //fault control
+        {
+          char txt[200];
+          sprintf(txt, "Error: %s file could not be read completely.", fileName);
+          throw std::runtime_error(txt);
+          hit =false; break;
+        }
+        
+        if(fp.eof() || !hit) break;
+      }
+  }
+  if(pxIndex!=pxTotal) printf("warning: not all coordinates were loaded.\n");
+  fp.close();
+  return pxCoord;
+}
+
+//' @name rGetColumFromFile()
+ //' @title returns a column of the peak matrix: 
+ //' 
+ //' @param file -> file name with peak matrix
+ //' @param column -> desired column (first = 1)
+ //' @return a vector with intensity of each pixel, m/z, mass resolution and number of pixels with non-zero magnitude.
+ 
+  // [[Rcpp::export]]
+NumericVector rGetColumFromFile(const char* file, int column)
+{
+  std::fstream fp;
+  std::streampos pos, colSize;
+  int nSamples, totalPx, nIons;
+  
+  fp.open(file, std::fstream::in | std::ios::binary);
+  if(!fp.is_open())
+    {
+      char txt[200];
+      sprintf(txt, "Error: The internal %s file could not be created.\n The peak matrix cannot be saved.\n", file);
+      throw std::runtime_error(txt);
+    }
+    fp.read((char*)&nSamples, sizeof(int)); //samples number
+    fp.read((char*)&totalPx,  sizeof(int)); //samples number
+    fp.read((char*)&nIons,    sizeof(int)); //samples number
+
+    colSize=((totalPx+2)*sizeof(float)+sizeof(int));
+    pos=3*sizeof(int)+nSamples*sizeof(int)+(column-1)*colSize;
+    
+    //printf("%d %d %d %d %d\n", nSamples, totalPx, nIons, colSize, (int)pos);
+//    fp.seekg(pos, std::ios_base::beg);
+    
+    NumericVector ret(totalPx+3);
+    float intensity;
+    int pxSupport;
+    fp.seekg(pos, std::ios_base::beg);
+    for(int i=0; i<totalPx+3; i++)
+    {
+        fp.read((char*)&intensity, sizeof(float));
+        ret[i]=intensity;
+        //if(i<3) printf("...%f\n", intensity);
+    }
+    fp.close();
+    return ret;  
+}
+
+
 /// R METHOD ////////////////////////////////////////////////////////////////////////
 
 //'
@@ -44,26 +198,30 @@ std::mutex gMutex;
  //'  pixelsSample: Vector with number of pixels in each sample analyzed.
  //'     
  // [[Rcpp::export]]
-List peakMatrixR(int totalPixels, Rcpp::List params, float mzLow, float mzHigh, int nThreads)
+List peakMatrixR(Rcpp::String baseDir, Rcpp::List params, float mzLow, float mzHigh, int nThreads)
 {
   NumericVector nv;
-  
+//  double *Z=new double[1000000000];
   nv=params["massResolution"];
   float massResolution=nv[0];
-  
-  nv=params["minPixelsSupport"];
-  float pxSupport=nv[0]*totalPixels/100.0;
   
   //Two peaks are considered linked if they are closer than the given standard deviation.
   nv=params["linkedPeaks"]; 
   float linkedPeaks=nv[0];
-  
+
   //class for segmentation of the mass axis.
-  Segments segments(totalPixels, massResolution, mzLow, mzHigh, linkedPeaks);
+  Segments segments(massResolution, mzLow, mzHigh, linkedPeaks);
   
+  //conversion Rcpp::String to char*
+  char *fileName=new char[200];
+  strcpy(fileName, (char*)baseDir.get_cstring());
+  strcat(fileName, (char*)"tmpGaussians.bin");
+
   //Loading the Gaussians generated by the RawToGaussians class from a temporary file.
-  int nPx=segments.loadGaussians((char*)"tmpGaussians.bin", totalPixels);
-  if(nPx!=totalPixels){printf("\t\t\twarning: %d pixels with spectrum without content.\n", totalPixels-nPx); }
+  int totalPixels=segments.loadGaussians(fileName);
+
+  nv=params["minPixelsSupport"];
+  float pxSupport=nv[0]*totalPixels/100.0;
   
   float linked=linkedPeaks;
   //Segments from mass axis
@@ -77,8 +235,11 @@ List peakMatrixR(int totalPixels, Rcpp::List params, float mzLow, float mzHigh, 
   PeakMatrix peakMatrix(totalPixels, massResolution, mzLow, mzHigh, pxSupport, segments.m_massRange_p, segments.m_gaussians_p, nThreads);
   peakMatrix.m_massRangeSize=size;
   
+  strcpy(fileName, (char*)baseDir.get_cstring());
   //build the peak matrix
-  List ret=peakMatrix.massRangeToCentroids(massRange);
+  List ret=peakMatrix.massRangeToCentroids(fileName, massRange);
+  
+  delete [] fileName;
   return ret;
 }
 
@@ -116,6 +277,7 @@ PeakMatrix::PeakMatrix(int totalPixels, float massResolution, float mzLow, float
 //Destructor
 PeakMatrix::~PeakMatrix()
 {
+  return;
   //the memory reserved for the ion chain is released.
   if(m_ionEntry_p)
   {
@@ -143,7 +305,7 @@ PeakMatrix::~PeakMatrix()
 //peakMatrix: Matrix of centroids and the intensity associated with each pixel.
 //massVector: The mz associated with each column of the peakMatrix.
 //pixelsSupport: Number of pixels with intensity > minPixelsSupport.
-List PeakMatrix::massRangeToCentroids(MASS_RANGE massRangeIn)
+List PeakMatrix::massRangeToCentroids(char *baseDir, MASS_RANGE massRangeIn)
 {
   Common common;
   int indexLow =common.nearestIndexMassRangeLow (massRangeIn.low,  m_massRange_p, m_massRangeSize);
@@ -213,57 +375,68 @@ List PeakMatrix::massRangeToCentroids(MASS_RANGE massRangeIn)
   {
     totalIons+=m_totalIons[i];
   }
-  NumericMatrix peakMatrix(m_totalPixels, totalIons);  //peak matrix.
-  NumericVector massVector(totalIons);              //mass vector.
-  NumericVector massResolution(totalIons);          //mass resolution.
-  IntegerVector pixelsSupport(totalIons);           //#Support pixels.
+  std::fstream fp;
   
-  //Each thread contains the chained information of a consecutive part of the ions.
-  ION_ENTRY *localIonEntry_p; //input
-  int col=0;
-  float lastMass=0;
-  for(int thr=0; thr<m_nThreads; thr++)
-  {
-    localIonEntry_p=m_ionEntry_p[thr];  //entry to the info.
-    while(localIonEntry_p->group) //as long as the next link is not zero.
+  char fileName[200];
+  strcpy(fileName, baseDir);
+  strcat(fileName, (char*)"tmpPixelsCoordinates.bin");
+  int nPx=loadPixelsCoordinates(fileName, m_totalPixels);
+  if(nPx!=m_totalPixels){printf("ERROR: pixel consistency error (%d/%d)\n", nPx, m_totalPixels); return 0;}
+  
+//The peak matrix is saved to tmpPeakMatrix.bin file and no information is returned.
+  
+  strcpy(fileName, baseDir);
+  strcat(fileName, (char*)"tmpPeakMatrix.bin");
+  fp.open(fileName, std::fstream::out | std::ios::binary | std::ios::trunc);
+    if(!fp.is_open())
     {
-      //It may happen that the initial masses of a thread are lower than the last masses of 
-      //the previous thread, and they should be discarded. 
-      //This is a consequence of dealing with joined Gaussians.     
-      if(localIonEntry_p->mass>lastMass)                 //the masses are ordered.
+      char txt[200];
+      sprintf(txt, "Error: The internal file %s could not be created.\n The peak matrix cannot be saved.\n", fileName);
+      throw std::runtime_error(txt);
+    }
+    int col=0;
+    fp.write((char*)&m_nSamples, sizeof(int)); //samples number
+    fp.write((char*)&col, sizeof(int)); //space for matrix rows
+    fp.write((char*)&col, sizeof(int)); //space for matrix cols
+    
+    for(int i=0; i<m_nSamples; i++) 
+    {
+      fp.write((char*)&m_pixelsSample[i], sizeof(int)); //size of each sample
+    }
+    
+    ION_ENTRY *localIonEntry_p; //input
+    float lastMass=0;
+    float tmp;
+    for(int thr=0; thr<m_nThreads; thr++)
+    {
+      localIonEntry_p=m_ionEntry_p[thr];  //entry to the info.
+      while(localIonEntry_p->group) //as long as the next link is not zero.
       {
-        massVector(col)    =localIonEntry_p->mass;           //centroid
-        massResolution(col)=localIonEntry_p->massResolution; //massResolution
-        pixelsSupport(col) =localIonEntry_p->size;        //#pixels that support the ion
-        for(int row=0; row<m_totalPixels; row++)             //for each pixel
-          peakMatrix(row, col)=localIonEntry_p->set[row]; //intensities
-        col++;
+        //It may happen that the initial masses of a thread are lower than the last masses of 
+        //the previous thread, and they should be discarded. 
+        //This is a consequence of dealing with joined Gaussians.     
+        if(localIonEntry_p->mass>lastMass)                 //the masses are ordered.
+        {
+          fp.write((char*)&localIonEntry_p->mass, sizeof(float));
+          fp.write((char*)&localIonEntry_p->massResolution, sizeof(float));
+          tmp=(float)localIonEntry_p->size;
+          fp.write((char*)&tmp, sizeof(float));
+          for(int row=0; row<m_totalPixels; row++)             //for each pixel
+            fp.write((char*)&localIonEntry_p->set[row], sizeof(float));
+          col++;
+        }
+        if(localIonEntry_p->group->group==0) //the last link contains no info.
+          lastMass=localIonEntry_p->mass;    //last mass of the thread
+        localIonEntry_p=localIonEntry_p->group; //next item
       }
-      if(localIonEntry_p->group->group==0) //the last link contains no info.
-        lastMass=localIonEntry_p->mass;    //last mass of the thread
-      localIonEntry_p=localIonEntry_p->group; //next item
     }
-  }
-  
-  int nPx=loadPixelsCoordinates((char*)"tmpPixelsCoordinates.bin", m_totalPixels);
-  if(nPx!=m_totalPixels){printf("warning: pixel consistency error (%d/%d)\n", nPx, m_totalPixels); }
-  NumericMatrix coord(m_totalPixels, 2);  //coordinates matrix.
-  int coordIndex=0;
-  for(int px=0; px<m_totalPixels; px++)//for all pixels
-  {
-    if(m_gaussians_p[px].gauss_p==0) continue; //pixel without Gaussians
-    else {
-      coord(coordIndex,0)=m_pixelsCoordinates_p[px].x;
-      coord(coordIndex,1)=m_pixelsCoordinates_p[px].y;
-      coordIndex++;
-    }
-  }
-  NumericVector pixelsSample(m_nSamples);
-  for(int i=0; i<m_nSamples; i++) pixelsSample[i]=m_pixelsSample[i];
-  
-  List ret=List::create(Named("peakMatrix")=peakMatrix, Named("mass")=massVector, Named("massResolution")=massResolution, 
-                        Named("pixelsSupport")=pixelsSupport, Named("coordinates")=coord, Named("pixelsSample")=pixelsSample);
-  return ret;
+    fp.seekg(sizeof(int), std::ios_base::beg);
+    fp.write((char*)&m_totalPixels, sizeof(int));
+    fp.write((char*)&col, sizeof(int));
+
+    fp.close();
+
+  return 0;
 }
 
 //getCentroidsIntoRange()
@@ -725,7 +898,7 @@ int PeakMatrix::loadPixelsCoordinates(char *fileName, int totalPixels)
   if(!fp.is_open())
   {
     char txt[200];
-    sprintf(txt, "Error: %s file could not be opened\n.", fileName);
+    sprintf(txt, "Error: %s file could not be opened\n", fileName);
     throw std::runtime_error(txt);
   }
   int nSamplePixels, nPixels, nPxGauss, coordSize=2*sizeof(int);
@@ -757,3 +930,5 @@ int PeakMatrix::loadPixelsCoordinates(char *fileName, int totalPixels)
   fp.close();
   return pxTotal;
 }
+
+ 

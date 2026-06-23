@@ -536,3 +536,71 @@ float Common::varF(float *prob, float *data, int size, float *mean_p)
   return S;
 }
 
+//Extracts the file extension from a filename.
+//Returns true if the extension is not found.
+bool Common::getFileExtension(const char *fileName, char* extension)
+{
+  int index=0;
+  for(int i=strlen(fileName); i; i--)
+  {
+    if(fileName[i]=='.') {index=i; break;} 
+  }
+  if(index) 
+  {
+    strcpy(extension, fileName+index+1);
+    return false;
+  }
+  
+  return 0;
+}
+
+//Extracts the file name from a path, includes the possible extension.
+//Returns true if fileName is null.
+bool Common::getFileNameWithExt(const char *fileName, char* name)
+{
+  if(strlen(fileName)==0) return true;
+  int index=0;
+  for(int i=strlen(fileName); i; i--)
+  {
+    if(fileName[i]=='/' || fileName[i]=='\\') {index=i; break;} 
+  }
+  strcpy(name, fileName+index+1);
+  
+  return 0;
+}
+
+//Extracts the file name from a path, excludes the possible extension.
+//Returns true if fileName is null.
+bool Common::getFileNameWithoutExt(const char *fileName, char* name)
+{
+  if(strlen(fileName)==0) return true;
+  int index1=0, index2=0;
+  for(int i=strlen(fileName); i; i--)
+  {
+    if(fileName[i]=='.') index1= i;
+    if(fileName[i]=='/' || fileName[i]=='\\') {index2=i+1; break;} 
+  }
+  for(int i=index2, k=0; i<index1; i++, k++)
+    name[k]=fileName[i];
+  name[index1]=0;
+  return 0;
+}
+
+//Extracts the directory from a path.
+//Returns true if fileName is null.
+bool Common::getFileNameDirectory(const char *fileName, char* directory)
+{
+  if(strlen(fileName)==0) return true;
+  int index=0;
+  for(int i=strlen(fileName); i; i--)
+  {
+    if(fileName[i]=='/' || fileName[i]=='\\') {index=i; break;} 
+  }
+  if(index==0) strcpy(directory, ".");
+  else
+    for(int i=0; i<=index; i++)
+      directory[i]=fileName[i];
+  directory[index+1]=0;
+  
+  return 0;
+}

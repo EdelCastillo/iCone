@@ -36,7 +36,7 @@ IntensityPeak::~IntensityPeak()
     if(m_peakList.intPeak_p)    delete [] m_peakList.intPeak_p;
     if(m_peakList.uPeak_p)      delete [] m_peakList.uPeak_p;
     if(m_intPeak_p) delete m_intPeak_p;
-    
+
 //printf("...end intPeak destructor\n");
 }
 

@@ -36,7 +36,7 @@ using namespace std;
 class Segments
 {
 public:
-  Segments(int totalPixels, float massResolution, float mzLow, float mzHigh, float linkedPeaks);
+  Segments(float massResolution, float mzLow, float mzHigh, float linkedPeaks);
   ~Segments();
   
   //Load the file with information about the Gaussian curves associated with each pixel
@@ -44,7 +44,7 @@ public:
   //fileName: temporary file name
   //totalPixels: total pixels in the file
   //Returns false if the load failed
-  int loadGaussians(char *fileName, int nPixels);
+  int loadGaussians(char *fileName);
     
   //getMassRanges()
   //establishes the mass segments where overlapping Gaussians exist.

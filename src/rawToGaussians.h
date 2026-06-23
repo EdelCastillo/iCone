@@ -47,7 +47,7 @@ public:
   
   //Constructor
   //captures input information, allocates memory and initializes.
-  RawToGaussians(const char* ibdFname, Rcpp::List imzML, Rcpp::List params,  Rcpp::NumericVector pxList, float mzLow=0, float mzHigh=0, int nThreads=0);
+  RawToGaussians(char *baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params,  Rcpp::NumericVector pxList, float mzLow=0, float mzHigh=0, int nThreads=0);
   
   // Saves the Gaussian data to the given file
   // Adds it to any existing data
@@ -156,7 +156,7 @@ private:
   bool          m_enable;
   int           m_SNRmethod;
   NoiseEstimation *m_noiseEst_p; 
-
+  double *Z;
 }; 
 
 #endif

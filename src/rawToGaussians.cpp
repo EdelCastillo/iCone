@@ -17,13 +17,14 @@
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *********************************************************************************/
 #include "rawToGaussians.h"
+#include <cstdlib>
 
  extern int gProcSegments, gVez; //observers.
  extern std::mutex gMutex;
  int  gPeakCount, gSpectra, gError;
  float gMinMass, gMaxMass;
 
-/// R METHOD ////////////////////////////////////////////////////////////////////////
+/// R METHODS ////////////////////////////////////////////////////////////////////////
 
 //'
  //'  @name rawToGaussiansR
@@ -44,11 +45,13 @@
  //'  @return number of pixels
  //'     
  // [[Rcpp::export]]
- int rawToGaussiansR(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, int nThreads)
+ int rawToGaussiansR(Rcpp::String baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, int nThreads)
  {
    gPeakCount=0, gSpectra=0;
-
-   RawToGaussians pMatrix(ibdFname, imzML, params, pxList, mzLow, mzHigh, nThreads);
+   char *directory=new char[200];
+   strcpy(directory, (char*)baseDir.get_cstring());
+   
+   RawToGaussians pMatrix(directory, ibdFname, imzML, params, pxList, mzLow, mzHigh, nThreads);
    if(pMatrix.m_hit==false) return 0;
    
    //Phase 1:
@@ -58,7 +61,14 @@
       {return 0;}
    if(gPeakCount<=0) 
       {printf("No peaks are detected in the sample.\n"); return 0;}
-   bool hit=pMatrix.saveGaussians((char*)"tmpGaussians.bin", pMatrix.m_gaussians_p);
+   
+   //conversion Rcpp::String to char*
+   char *fileName=new char[200];
+   strcpy(fileName, (char*)baseDir.get_cstring());
+   strcat(fileName, (char*)"tmpGaussians.bin");
+   
+   bool hit=pMatrix.saveGaussians(fileName, pMatrix.m_gaussians_p);
+   delete []fileName;
    return pMatrix.m_NPixels;
  }
  
@@ -98,7 +108,7 @@
      }
      rawMzData=new float[maxMzLength]; 
      getImzMLData_p= new GetImzMLData(ibdFname, imzML);   
-     
+
      for(int px=0; px<nPixels; px++)
      {
        massSize=getImzMLData_p->getPixelMassF(px, rawMzData);//mass vector
@@ -159,7 +169,7 @@
    }
    
    if(getImzMLData_p) delete getImzMLData_p;
-   if(rawMzData)      delete rawMzData;
+   if(rawMzData)      delete [] rawMzData;
    if(!hit){
      List ret=List::create(Named("minPixel")=minPx, Named("maxPixel")=maxPx, Named("minMz")=minMz, Named("maxMz")=maxMz);
      return ret;
@@ -189,7 +199,7 @@
  List rGetAverageGaussianSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, float overSampling, int nThreads)
  {
    gPeakCount=0, gSpectra=0;
-   RawToGaussians gauss(ibdFname, imzML, params, pxList, mzLow, mzHigh, nThreads);  
+   RawToGaussians gauss(0, ibdFname, imzML, params, pxList, mzLow, mzHigh, nThreads);  
    if(gauss.m_hit==false) return 0;
    
    //loads data from a file and converts its peak into Gaussians.
@@ -221,18 +231,87 @@
  // [[Rcpp::export]]
  List rGetAverageSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, float overSampling)
  {
-   RawToGaussians gauss(ibdFname, imzML, params, pxList, mzLow, mzHigh, 1);  
+   RawToGaussians gauss(0, ibdFname, imzML, params, pxList, mzLow, mzHigh, 1);  
    if(gauss.m_hit==false) return 0;
    
    List ret=gauss.getMeanSpectrum(gauss.m_massResolution, (int)overSampling);
    return ret;
  }
  
+ //'  @name rSaveMassRange
+ //'  @title save the mz range information to file massRange.bin
+ //'  
+ //'  @param mzLow    -> low  m/z
+ //'  @param mzHigh   -> high m/z
+ //'  @param fileName ->absolute path to file
+ //'  @return TRUE if the file could not be opened.
+ //'  
+ // [[Rcpp::export]]
+bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
+{
+  std::fstream fp;
+  fp.open(fileName, std::fstream::out | std::ios::binary | std::ios::trunc);
+  if(!fp.is_open())
+  {
+    char txt[200];
+    sprintf(txt, "Error: %s file could not be opened\n", fileName);
+    throw std::runtime_error(txt);
+    return TRUE;
+  }
+  
+  fp.write((char*)&mzLow,  sizeof(double)); 
+  fp.write((char*)&mzHigh, sizeof(double)); 
+  fp.close();
+  return FALSE;
+}
+ 
+ //'  @name rLoadMassRange
+ //'  @title load the mz range information from file massRange.bin
+ //'  @param fileName ->absolute path to file
+ //'  @return a vector whit mzLow, mzHigh. Zero if error
+ //'  
+ // [[Rcpp::export]]
+ NumericVector rLoadMassRange(const char* fileName)
+ {
+   std::fstream fp;
+   fp.open(fileName, std::fstream::in | std::ios::binary);
+   if(!fp.is_open())
+   {
+     char txt[200];
+     sprintf(txt, "Error: %s file could not be opened\n", fileName);
+     throw std::runtime_error(txt);
+     return 0;
+   }
+   double mzLow, mzHigh;
+   fp.read((char*)&mzLow,  sizeof(double)); 
+   fp.read((char*)&mzHigh, sizeof(double)); 
+   fp.close();
+   NumericVector ret(2);
+   ret(0)=mzLow;
+   ret(1)=mzHigh;
+   return ret;
+ }
+
+ //'  @name rGetDirectory
+ //'  @title 
+ //'  @param fileName ->absolute path to file
+ //'  @return a vector 
+ //'  
+ // [[Rcpp::export]]
+ CharacterVector rGetDirectory(const char* path)
+ {
+   Common common;
+   char fileName[200];
+   common.getFileNameDirectory(path, fileName);
+   CharacterVector vect=fileName;//(strlen(fileName));
+//   for(int i=0; i<strlen(fileName); i++) vect[i]=fileName[i]
+  return vect;
+ }
  
  //Constructor
  //captures input information, allocates memory and initializes.
  ////////////////////////////////////////////////////////////////////////////////
- RawToGaussians::RawToGaussians(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, Rcpp::NumericVector pxList, float mzLow, float mzHigh, int nThreads)
+ RawToGaussians::RawToGaussians(char *baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params, Rcpp::NumericVector pxList, float mzLow, float mzHigh, int nThreads)
  {
    m_hit=true;
    m_mzLow=mzLow;
@@ -286,7 +365,7 @@
      m_pxMin=pxMin;
      m_pxMax=pxMax;
    }
-//   m_NPixels=20;
+//   m_NPixels=12000;
    
    printf("pixel Minimun:%d; pixel Maximun:%d; total:%d\n", m_pxMin+1, m_pxMax+1, m_NPixels);
    
@@ -296,7 +375,10 @@
    NumericVector X=df["x"];
    NumericVector Y=df["y"];
    
-   savePixelsCoordinates((char*)"tmpPixelsCoordinates.bin", X, Y);
+   char fileName[200];
+   strcpy(fileName, baseDir);
+   strcat(fileName, "tmpPixelsCoordinates.bin");
+   savePixelsCoordinates(fileName, X, Y);
    
    nv=params["SNR"];
    m_SNR=nv[0];
@@ -326,6 +408,7 @@
    m_getImzMLData_p= new GetImzMLData(ibdFname, imzML);
    
    //memory and its initialization
+
    m_gaussians_p=new GAUSS_SP[m_NPixels];
    for(int px=0; px<m_NPixels; px++)
    {
@@ -387,6 +470,7 @@
      m_spectro[i].mutexIn_p ->lock();
      m_spectro[i].mutexOut_p->lock();
      m_spectro[i].thread_p=new std::thread(&RawToGaussians::mtGetGaussians, this, i);
+
    }
    gMutex.unlock();
    gProcSegments=0;
@@ -395,6 +479,7 @@
    
    //structure initialization for peak.
    m_peakFG_p= new PEAK_F_GROUP[m_NPixels];
+
    for(int px=0; px<m_NPixels; px++)
    {
      m_peakFG_p[px].peakF_p=0;
@@ -402,8 +487,6 @@
      m_peakFG_p[px].peakFsize=0; 
      m_peakFG_p[px].peakUsize=0;
    }
-   
-   //  fp=fopen("kk.txt", "w");
  }
  
  
@@ -411,16 +494,17 @@
  //free reserved memory
  RawToGaussians::~RawToGaussians()
  {
-   //printf("init PeakMatrix destructor\n");
+//   printf("init peakMatrix destructor\n");
    if(m_gaussians_p)
    {
+     
      for(int px=0; px<m_NPixels; px++)
      {
-       if(m_gaussians_p[px].gauss_p) delete[] m_gaussians_p[px].gauss_p;
+       if(m_gaussians_p[px].gauss_p) {delete[] m_gaussians_p[px].gauss_p;}
      }
      delete []m_gaussians_p;
    }
-
+   
    freeMemoryPeak();
 
    for(int i=0; i<m_nThreads; i++)
@@ -430,9 +514,10 @@
      if(m_spectro[i].mutexOut_p) {delete m_spectro[i].mutexOut_p; m_spectro[i].mutexOut_p=0;}
    }
    
-
+   if(m_pxList) delete [] m_pxList;
    if(m_noiseEst_p)  delete m_noiseEst_p;
-   //printf("end PeakMatrix destructor\n");
+   
+//   printf("end PeakMatrix destructor\n");
  }
  
  //freeing buffer.
@@ -446,13 +531,14 @@
      for(int px=0; px<m_NPixels; px++)
      {
        if(m_peakFG_p[px].peakF_p) 
-       {delete [] m_peakFG_p[px].peakF_p; m_peakFG_p[px].peakF_p=0;}
+          {delete [] m_peakFG_p[px].peakF_p; m_peakFG_p[px].peakF_p=0;
+}
        if(m_peakFG_p[px].peakU_p) 
-       {delete [] m_peakFG_p[px].peakU_p; m_peakFG_p[px].peakU_p=0;}
+          {delete [] m_peakFG_p[px].peakU_p; m_peakFG_p[px].peakU_p=0;
+}
      }
      delete []m_peakFG_p; m_peakFG_p=0;
    }
-
    //spectrum info
    for(int i=0; i<m_nThreads; i++)
    {
@@ -463,9 +549,10 @@
      if(m_spectro[i].tmpInt_p)   {delete []m_spectro[i].tmpInt_p; m_spectro[i].tmpInt_p=0;}
      if(m_spectro[i].tmpSNR_p)   {delete []m_spectro[i].tmpSNR_p; m_spectro[i].tmpSNR_p=0;}
      if(m_spectro[i].sort_p)     {delete []m_spectro[i].sort_p;   m_spectro[i].sort_p=0;}
-   }
-   
+//    if(m_spectro[i].mutexIn_p)  {delete []m_spectro[i].mutexIn_p;  m_spectro[i].mutexIn_p=0;}
+//     if(m_spectro[i].mutexOut_p) {delete []m_spectro[i].mutexOut_p; m_spectro[i].mutexOut_p=0;}
 
+   }
  }
  
  //rawToGaussians
@@ -477,7 +564,6 @@
  int RawToGaussians::rawToGaussians()
  {
    printf("Processing \n\tphase 1:\traw to gaussians(%%): 00 ");
-   
    int vez=1;
    Common common;
    int spSize=0;
@@ -492,6 +578,7 @@
    {
      //indication of the progress of the process (10% resolution)
      if((float)iPx/(float)m_NPixels>vez*0.1) {if(vez<10) printf("%d ", vez*10); vez++;}
+     if(iPx==m_NPixels) break;
      
      //We load as many spectra as threads are used.
      //Each spectrum is processed by a thread.
@@ -509,10 +596,10 @@
        }
        if(spSize>2 && iPx<=m_NPixels) 
        {
+         
          nThr++;
          {m_spectro[thr].mutexIn_p->unlock();} //This thread is allowed to run.
        }
-       if(iPx==m_NPixels) break;
      }
      //wait for the conclusion of all threads.
      for(int thr=0; thr<nThr; thr++) //for each thread
@@ -577,7 +664,7 @@
  {
    //raw info of mass
    int px=m_pxList[iPx];
-   
+  
    int massSize=m_getImzMLData_p->getPixelMassF(px, m_spectro[spIndex].tmpMass_p);//mass vector
    m_spectro[spIndex].size=massSize;
    if(massSize<=0) return 0;
@@ -603,9 +690,6 @@
    double *centroids_p=0;
    int *centroidsIndex_p=0;
    //  m_spectro[spIndex].mutexOut_p->unlock(); //end of spectrum processing.
-   //  return 0;
-   
-   //while execution is enabled.
    while(m_enable)
    {
      m_spectro[spIndex].mutexIn_p->lock(); //permission to continue (synchro)
@@ -654,7 +738,6 @@
      int nPeak;
      //the peak are extracted from the spectrum (they are delimited by their indices).
      nPeak=intPeak.getPeakList(&m_spectro[spIndex]);
-//    nPeak=0; 
      if(nPeak>0)
      {
        gMutex.lock();
@@ -664,7 +747,6 @@
        if(m_spectro[spIndex].tmpMass_p[spSize_tmp-1]>gMaxMass) gMaxMass=m_spectro[spIndex].tmpMass_p[spSize_tmp-1];
        gMutex.unlock();
      }
-     
      if(nPeak>0) //if there are peak to treat
      {
        int px=m_spectro[spIndex].pixel; //pixel
@@ -676,22 +758,21 @@
          m_peakFG_p[px].peakF_p[i].max =intPeak.getSinglePeak(i).max;
          m_peakFG_p[px].peakF_p[i].high=intPeak.getSinglePeak(i).high;
        }
-       
+         
        m_peakFG_p[px].peakFsize=nPeak;//number of simple peak
        //the information of compound peak (simple joined-overlapping peak) is obtained.
        int nUPeak=intPeak.getCompoundPeakNumber(); 
-       
        //Compound peak information is saved.
        //Each entry is a reference to the initial and final single peak of the merged peak.
-       m_peakFG_p[px].peakU_p=new PEAK_UNITED[nUPeak];
-       for(int i=0; i<nUPeak; i++)
+      m_peakFG_p[px].peakU_p=new PEAK_UNITED[nUPeak];
+      for(int i=0; i<nUPeak; i++)
        {
          m_peakFG_p[px].peakU_p[i].low =intPeak.getCompoundPeak(i).peakLow;
          m_peakFG_p[px].peakU_p[i].high=intPeak.getCompoundPeak(i).peakHigh;
        }
        m_peakFG_p[px].peakUsize=nUPeak;//number of compound peak
-       
        //the peak are converted to Gaussians
+
        gaussians_p=new GAUSS_PARAMS[nPeak]; //temporal copy of Gaussians
        centroids_p=new double[nPeak];       //temporary mass copy
        centroidsIndex_p=new int[nPeak];     //indices to ordered masses
@@ -702,7 +783,8 @@
          if(gaussians_p)     {delete [] gaussians_p;       gaussians_p=0;}
          if(centroids_p)     {delete [] centroids_p;       centroids_p=0;}
          if(centroidsIndex_p){delete [] centroidsIndex_p;  centroidsIndex_p=0;}
-         m_gaussians_p[px].gauss_p=0;
+
+         //m_gaussians_p[px].gauss_p=0;
          m_gaussians_p[px].size=0;
          m_spectro[spIndex].mutexOut_p->unlock();
          continue;
@@ -731,14 +813,14 @@
          }
          
        }
-       else m_gaussians_p[px].size=0;
+     else {m_gaussians_p[px].size=0;}
        
      } //end of peak processing
      
      if(gaussians_p)     {delete [] gaussians_p;       gaussians_p=0;}
      if(centroids_p)     {delete [] centroids_p;       centroids_p=0;}
      if(centroidsIndex_p){delete [] centroidsIndex_p;  centroidsIndex_p=0;}
-     
+
      m_spectro[spIndex].mutexOut_p->unlock(); //end of spectrum processing.
    }
    
@@ -768,7 +850,7 @@
    
    //memory for predictable Gaussians.
    m_gaussians_p[px].gauss_p=new GAUSS_PARAMS[m_peakFG_p[px].peakFsize];
-   
+
    //for each set of joined peak.
    for(int uPeak=0; uPeak<nUPeak; uPeak++)
    {
@@ -809,7 +891,7 @@
      }
      
      int nGauss=gmmPeak.getDeconvNumber(); //# gaussians
-     
+
      bool hit=true;
      GAUSSIAN gaussIn, gaussOut; //if it is required to adapt the mass axis.
      for(int g=0; g<nGauss; g++)
@@ -902,7 +984,7 @@
      meanInt[i]=meanMassAxis_p[i]/pxCount;
    }
    if(meanMassAxis_p) delete [] meanMassAxis_p;
-   
+
    List ret=List::create(Named("averageMz")=meanMz, Named("averageIntensity")=meanInt);
    return ret;
  }
@@ -995,7 +1077,7 @@
    }
    
    if(meanMassAxis_p) delete [] meanMassAxis_p;
-   
+
    List ret=List::create(Named("averageMz")=meanMz, Named("averageIntensity")=meanInt);
    return ret;
  }
@@ -1074,7 +1156,7 @@
      if(fp.fail() || fp.bad()) //control de errores
        {
          char txt[200];
-         sprintf(txt, "Error: %s file could not be written completely\n.", fileName);
+         sprintf(txt, "Error: %s file could not be written completely\n", fileName);
          throw std::runtime_error(txt);
          hit =false; break;
        }

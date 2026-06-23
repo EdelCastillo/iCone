@@ -37,7 +37,9 @@ GmmPeak::~GmmPeak()
 {
 //printf("...ini GmmPeak destructor\n");
     if(m_deconv_p)  delete [] m_deconv_p;
-//printf("...end GmmPeak destructor\n");
+    if(m_sGmm.x) delete []m_sGmm.x;
+    if(m_sGmm.y) delete []m_sGmm.y;
+    //printf("...end GmmPeak destructor\n");
 
 }
 
