@@ -580,7 +580,7 @@ rPlotIon<-function(pMatrix, mz)
     A=intensity[i]/co;
     A=9-(A%%9)
     if(A>9) A=9;
-    lines(X[i], Y[i], type="p", cex=0.1, col=colors[A])
+    lines(X[i], Y[i], type="p", cex=0.5, col=colors[A])
   }
 }
 

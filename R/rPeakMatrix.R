@@ -216,12 +216,12 @@ getPeakMatrix<-function(data_file,
      hit=TRUE;
      
      fileA=paste0(baseDir, "tmpMassRange.bin")
-     rSaveMassRange(fileA, minMass, maxMass);
+     rSaveMassRange(fileA, minMass, maxMass); #save the temporary file with the peaks converted to Gaussians.
      
      gc();
      rm(in_img, basicInfo)
     }
-  else if (fileExtension == "bin")
+  else if (fileExtension == "bin") #allows execution to continue at step 2 (Gaussians to centroids)
     {
     fileA=paste0(baseDir, "tmpGaussians.bin")
     cat(sprintf("The information contained in the %s file will be used.\nThis eliminates phase 1 of the processing.\n", fileA))
@@ -249,25 +249,23 @@ getPeakMatrix<-function(data_file,
   
   #rm(list = ls())
   gc()
-#  minMass=120; maxMass=1800;
-  #Gaussians to peak matrix (for all samples)
   fileA=paste0(baseDir, "tmpMassRange.bin")
-  massRange=rLoadMassRange(fileA);
-  peakMatrix=peakMatrixR(baseDir, params, massRange[1], massRange[2], nThreads);
-#  peakMatrix=c(peakMatrix, "pixel_size_um"=pixelSize)
-  peakMatrix<-c(peakMatrix, list("pixelSize_um"=pixelSize))
+  massRange=rLoadMassRange(fileA); #mass range to file
   
+  #step 2 and 3 (gaussians to centroids). Peak matrix to file tmpPeakMatrix.bin
+  peakMatrix=peakMatrixR(baseDir, params, massRange[1], massRange[2], nThreads);
+
   gc() 
   
-  #The peak array is captured in pzMatrix object from the tmpPeakMatrix.bin file.
+  #The peak array is captured in pkMatrix object from the tmpPeakMatrix.bin file.
   fileA=paste0(baseDir, "tmpPeakMatrix.bin")
-  metaInfo=rGetMetaDataFromFile(fileA)
+  metaInfo=rGetMetaDataFromFile(fileA) #generic information from peak matrix
   pkMatrix=matrix(ncol=metaInfo$nIons, nrow=metaInfo$totalPx);
   mass=vector(length = metaInfo$nIons)
   massResolution=vector(length = metaInfo$nIons)
   pxSupport=vector(length = metaInfo$nIons)
   
-  
+  #load ion by ion (This reduces the memory required)
   for(ion in 1:metaInfo$nIons)
   {
     tmpIon=rGetColumFromFile(fileA, ion)
@@ -277,10 +275,11 @@ getPeakMatrix<-function(data_file,
     pkMatrix[,ion]=tmpIon[4:length(tmpIon)]
   }
   
-  fileA=paste0(baseDir, "tmpPixelsCoordinates.bin")
-  coordinates=rGetCoordinatesFromFile(fileA);
+  fileA=paste0(baseDir, "tmpPixelsCoordinates.bin") 
+  coordinates=rGetCoordinatesFromFile(fileA, 0); #load coordinates for all samples
   peakMatrix <- list("peakMatrix" = pkMatrix, "mass" = mass, "massResolution" = massResolution,
-                   "pixelsSupport"=pxSupport, "coordinates"=coordinates, "pixelsSample"=metaInfo$pixelsSample)  
+                   "pixelsSupport"=pxSupport, "coordinates"=coordinates, 
+                   "pixelsSample"=metaInfo$pixelsSample, "pixelSize_um"=pixelSize)  
   pt<-proc.time() - pt
   display_processing_time(pt, "Data processing time")
   return(peakMatrix)

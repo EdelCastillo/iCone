@@ -243,13 +243,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // rGetCoordinatesFromFile
-NumericMatrix rGetCoordinatesFromFile(const char* fileName);
-RcppExport SEXP _iCone_rGetCoordinatesFromFile(SEXP fileNameSEXP) {
+NumericMatrix rGetCoordinatesFromFile(const char* fileName, int sample);
+RcppExport SEXP _iCone_rGetCoordinatesFromFile(SEXP fileNameSEXP, SEXP sampleSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const char* >::type fileName(fileNameSEXP);
-    rcpp_result_gen = Rcpp::wrap(rGetCoordinatesFromFile(fileName));
+    Rcpp::traits::input_parameter< int >::type sample(sampleSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetCoordinatesFromFile(fileName, sample));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -262,6 +263,31 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const char* >::type file(fileSEXP);
     Rcpp::traits::input_parameter< int >::type column(columnSEXP);
     rcpp_result_gen = Rcpp::wrap(rGetColumFromFile(file, column));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rGetMassVectorFromFile
+NumericVector rGetMassVectorFromFile(const char* file);
+RcppExport SEXP _iCone_rGetMassVectorFromFile(SEXP fileSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type file(fileSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetMassVectorFromFile(file));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rGetMassColumFromFile
+List rGetMassColumFromFile(const char* file, float mass, NumericVector massVect, int sample);
+RcppExport SEXP _iCone_rGetMassColumFromFile(SEXP fileSEXP, SEXP massSEXP, SEXP massVectSEXP, SEXP sampleSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type file(fileSEXP);
+    Rcpp::traits::input_parameter< float >::type mass(massSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type massVect(massVectSEXP);
+    Rcpp::traits::input_parameter< int >::type sample(sampleSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetMassColumFromFile(file, mass, massVect, sample));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -400,8 +426,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_iCone_CimzMLStore", (DL_FUNC) &_iCone_CimzMLStore, 3},
     {"_iCone_rGetPixelGaussians", (DL_FUNC) &_iCone_rGetPixelGaussians, 6},
     {"_iCone_rGetMetaDataFromFile", (DL_FUNC) &_iCone_rGetMetaDataFromFile, 1},
-    {"_iCone_rGetCoordinatesFromFile", (DL_FUNC) &_iCone_rGetCoordinatesFromFile, 1},
+    {"_iCone_rGetCoordinatesFromFile", (DL_FUNC) &_iCone_rGetCoordinatesFromFile, 2},
     {"_iCone_rGetColumFromFile", (DL_FUNC) &_iCone_rGetColumFromFile, 2},
+    {"_iCone_rGetMassVectorFromFile", (DL_FUNC) &_iCone_rGetMassVectorFromFile, 1},
+    {"_iCone_rGetMassColumFromFile", (DL_FUNC) &_iCone_rGetMassColumFromFile, 4},
     {"_iCone_peakMatrixR", (DL_FUNC) &_iCone_peakMatrixR, 5},
     {"_iCone_rawToGaussiansR", (DL_FUNC) &_iCone_rawToGaussiansR, 8},
     {"_iCone_rGetBasicInfo", (DL_FUNC) &_iCone_rGetBasicInfo, 3},

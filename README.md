@@ -65,6 +65,8 @@ massResolution: Vector with the mass resolution achieved in the peak matrix (mz/
  pixelsSupport: Vector with the number of pixels in each column with non-zero intensity.
    coordinates: Matrix with pixel coordinates (X/Y).
   pixelsSample: Vector with the number of pixels in each of the samples. In the peakMatrix and coordinates they appear in the same order.
+  pixelSize_um: Vector with the size of the pixels (spatial resolution) in micrometers.
+
 ```
 
 
@@ -160,6 +162,74 @@ return List: gaussians, mass intensity, SNR, noise
              SNR: signal-to-noise ratio associated with each mass of the raw spectrum.
            noise: noise estimation
 ```
+### **other methods**
+iCone generates four temporary binary files that can be explored later using the appropriate methods. 
+These files are created in the same folder passed as an argument and are overwritten with each execution of the getPeakMatrix() function.
+
+> **rGetMetaDataFromFile**(file)
+
+Returns generic information about the peak matrix temporary file.
+
+
+**Description of the parameters:**   
+```
+  file: file name with peak matrix (tmpPeakMatrix.bin)
+  
+  Return a list:
+   nSamples     -> number of samples analyzed.
+   totalPx      -> total number of pixels (cumulative of each sample).
+   nIons        -> number of columns in the matrix.
+   pixelsSample -> vector with the pixels in each sample.
+```
+
+> **rGetColumFromFile**(file, column)
+
+Returns a column of the peak matrix:
+
+**Description of the parameters:**   
+```
+      file: file name with peak matrix (tmpPeakMatrix.bin)
+    column: matrix column
+    return: a vector with intensity of each pixel, m/z, mass resolution and number of pixels with non-zero magnitude.
+```
+
+> **GetMassVectorFromFile**(file)
+
+Returns a vector with all the masses in peak matrix 
+
+**Description of the parameters:**   
+```
+      file: file name with peak matrix (tmpPeakMatrix.bin)
+    return: mass vector
+ ```
+> **rGetMassColumFromFile**(file, mass, massVect, sample)
+
+Returns a column information of the peak matrix
+
+**Description of the parameters:**   
+```
+ file     -> file name with peak matrix
+ mass     -> reference to the desired initial column of the peak matrix (Da).
+ massVect -> mass vector. If massVect size is not equal to matrix mass vector, the algorithm's efficiency decreases.
+ sample   -> just download the pixels from this sample.
+ return a list:
+      intensity: vector of intesities 
+           mass: mass associated with the column of peakMatrix.
+ massResolution: final mass resolution at centroid.
+  pixelsSupport: number of pixels in column with non-zero intensity. 
+```
+
+> **rGetCoordinatesFromFile**(file, sample)
+
+Returns a matrix with the coordinates of pixels (X/Y).
+If there are multiple samples, they appear sequentially; that is, the matrix has as many rows as the cumulative number of pixels in each sample and two columns.
+
+**Description of the parameters:**   
+```
+      file: file name with peak matrix (tmpPixelsCoordinates.bin)
+    sample: just download the pixels from this sample. If sample < 1 all sample are considered.
+```
+
 
 ### **functions for data visualization.**
 

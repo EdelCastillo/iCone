@@ -7,13 +7,15 @@
 If there are multiple samples, they appear sequentially; that is, the matrix has as many rows
 as the cumulative number of pixels in each sample and two columns.}
 \usage{
-rGetCoordinatesFromFile(fileName)
+rGetCoordinatesFromFile(fileName, sample)
 }
 \arguments{
+\item{sample}{-> just download the pixels from this sample.}
+
 \item{file}{-> file name with peak matrix}
 }
 \value{
-a matrix with the coordinates (X/Y) of all pixels.
+a matrix with the coordinates (X/Y) of pixels.
 }
 \description{
 returns a matrix with the coordinates of all pixels (X/Y).
