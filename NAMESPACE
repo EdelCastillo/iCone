@@ -2,10 +2,10 @@
 
 export(getAverageGaussianSpectrum)
 export(getAverageSpectrum)
+export(getColumnFromFile)
 export(getCoordinatesFromFile)
 export(getGaussiansFromSpectrum)
 export(getIntensityFromFile)
-export(getMassColumnFromFile)
 export(getMassVectorFromFile)
 export(getMetaDataFromFile)
 export(getPeakMatrix)

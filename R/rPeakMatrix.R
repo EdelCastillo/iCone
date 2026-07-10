@@ -285,6 +285,7 @@ getPeakMatrix<-function(data_file,
   return(peakMatrix)
 }
 
+#//////////////////////////////////////////////////////////////
 
 #' @name getPxGaussians
 #' @title It retrieves information from a single pixel.
@@ -382,6 +383,8 @@ getPixelGaussians<-function(data_file,
   cat("warning: imzML file type is required.\n" )
 }
 
+#//////////////////////////////////////////////////////////////
+
 #' @name getAverageGaussianSpectrum
 #' @title It obtains the average value of the Gaussian from all data into .imzML file.
 #' @param data_file: absolute reference to the file with the imzML extension.
@@ -478,6 +481,8 @@ getAverageGaussianSpectrum<-function(data_file,
   cat("warning: imzML file type is required.\n" )
 }
 
+#//////////////////////////////////////////////////////////////
+
 #' @name getAverageSpectrum
 #' @title It obtains the average value of the intensities from all data into .imzML file.
 #'        Noise is not taken into account.
@@ -544,6 +549,8 @@ getAverageSpectrum<-function(data_file,
   cat("warning: imzML file type is required.\n" )
 }
 
+#//////////////////////////////////////////////////////////////
+
 #' @name getGaussiansFromSpectrum
 #' @title Form Gaussians over each peak of the given spectrum.
 #' @param Intensity:   vector with value associated with each mass point.
@@ -590,6 +597,25 @@ getGaussiansFromSpectrum<-function(
     return(Gauss)
 }
 
+#//////////////////////////////////////////////////////////////
+
+#' @name getMetaDataFromFile
+#' @title returns generic information about the peak matrix located in a file.
+#' @param file -> file name with peak matrix  (tmpPeakMatrix.bin)
+#' @return a list:
+#'   nSamples     -> number of samples analyzed.
+#'   totalPx      -> total number of pixels (cumulative of each sample).
+#'   nIons        -> number of columns in the matrix.
+#'   pixelsSample -> vector with the pixels in each sample.
+#'
+#' @export
+getMetaDataFromFile<-function(file)
+{
+  return(rGetMetaDataFromFile(file));
+}
+
+#//////////////////////////////////////////////////////////////
+
 #' @name getPeakMatrixFromFile
 #' @title return the peak matrix into file
 #' @param file -> file name with peak matrix (tmpPeakMatrix.bin)
@@ -623,35 +649,9 @@ peakMatrix <- list("peakMatrix" = pkMatrix, "mass" = mass, "massResolution" = ma
 return(peakMatrix)
 }
 
-#' @name rGetMetaDataFromFile
-#' @title returns generic information about the peak matrix located in a file.
-#' @param file -> file name with peak matrix  (tmpPeakMatrix.bin)
-#' @return a list:
-#'   nSamples     -> number of samples analyzed.
-#'   totalPx      -> total number of pixels (cumulative of each sample).
-#'   nIons        -> number of columns in the matrix.
-#'   pixelsSample -> vector with the pixels in each sample.
-#'
-#' @export
-getMetaDataFromFile<-function(file)
-{
-  return(rGetMetaDataFromFile(file));
-}
+#//////////////////////////////////////////////////////////////
 
-#' @name rGetIntensityFromFile()
-#' @title returns a column with pixel intensities from the peak matrix: 
-#' 
-#' @param file -> file name with peak matrix (tmpPeakMatrix.bin)
-#' @param column -> desired column (first = 1)
-#' @return a vector with intensity of each pixel, m/z, mass resolution and number of pixels with non-zero magnitude.
-
-#' @export
-getIntensityFromFile<-function(file, column)
-{
-  return (rGetIntensityFromFile(file, column))
-}
-
-#' @name rGetMassVectorFromFile()
+#' @name getMassVectorFromFile()
 #' @title returns a vector with all the masses in peak matrix 
 #' @param file     -> file name with peak matrix (tmpPeakMatrix.bin)
 #' @return mass vector
@@ -662,7 +662,9 @@ getMassVectorFromFile<-function(file)
   return (rGetMassVectorFromFile(file))
 }
 
-#' @name rGetMassColumnFromFile()
+#//////////////////////////////////////////////////////////////
+
+#' @name getColumnFromFile()
 #' @title returns a column information of the peak matrix: 
 #' 
 #' @param file     -> file name with peak matrix (tmpPeakMatrix.bin)
@@ -676,12 +678,29 @@ getMassVectorFromFile<-function(file)
 #' pixelsSupport: number of pixels in column with non-zero intensity. 
 #' 
 #' @export
-getMassColumnFromFile<-function(file, mass, sample)
+getColumnFromFile<-function(file, mass, sample)
 {
-  return (rGetMassColumnFromFile(file, mass, sample))
+  return (rGetColumnFromFile(file, mass, sample))
 }
 
-#' @name rGetCoordinatesFromFile()
+#//////////////////////////////////////////////////////////////
+
+#' @name getIntensityFromFile()
+#' @title returns a column whit pixels intensities from the peak matrix: 
+#' 
+#' @param file -> file name with peak matrix (tmpPeakMatrix.bin)
+#' @param column -> desired column (first = 1)
+#' @return a vector with intensity of each pixel.
+#' 
+#' @export
+getIntensityFromFile<-function(file, column)
+{
+  return (rGetIntensityFromFile(file, column))
+}
+
+#//////////////////////////////////////////////////////////////
+
+#' @name getCoordinatesFromFile()
 #' @title returns a matrix with the coordinates of all pixels (X/Y).
 #' If there are multiple samples, they appear sequentially; that is, the matrix has as many rows 
 #' as the cumulative number of pixels in each sample and two columns.

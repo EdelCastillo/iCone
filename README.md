@@ -166,7 +166,7 @@ return List: gaussians, mass intensity, SNR, noise
 iCone generates four temporary binary files that can be explored later using the appropriate methods. 
 These files are created in the same folder passed as an argument and are overwritten with each execution of the getPeakMatrix() function.
 
-> **rGetMetaDataFromFile**(file)
+> **getMetaDataFromFile**(file)
 
 Returns generic information about the peak matrix temporary file.
 
@@ -182,7 +182,22 @@ Returns generic information about the peak matrix temporary file.
    pixelsSample -> vector with the pixels in each sample.
 ```
 
-> **GetMassVectorFromFile**(file)
+> **getPeakMatrixFromFile**(file)
+
+Return a list whit the peak matrix
+
+**Description of the parameters:**   
+```
+
+  file: file name with peak matrix (tmpPeakMatrix.bin)
+  return a list:
+     peakMatrix: Matrix of peak (centroids) rows = pixels, columns = intensity of each pixel.
+           mass: Vector with the masses associated with each column of peakMatrix.
+ massResolution: mass resolution associated with each mass.
+  pixelsSupport: Vector with the number of pixels in each column with non-zero intensity. 
+```
+
+> **getMassVectorFromFile**(file)
 
 Returns a vector with all the masses in peak matrix 
 
@@ -191,7 +206,7 @@ Returns a vector with all the masses in peak matrix
       file: file name with peak matrix (tmpPeakMatrix.bin)
     return: mass vector
  ```
-> **rGetMassColumFromFile**(file, mass, sample)
+> **getColumFromFile**(file, mass, sample)
 
 Returns a column information of the peak matrix
 
@@ -208,7 +223,7 @@ Returns a column information of the peak matrix
   pixelsSupport: number of pixels in column with non-zero intensity. 
 ```
 
-> **rGetIntensityFromFile**(file, column)
+> **getIntensityFromFile**(file, column)
 
 returns a column whit pixels intensities from the peak matrix
 
@@ -219,7 +234,7 @@ returns a column whit pixels intensities from the peak matrix
     return: a vector with intensity of each pixel.
 ```
 
-> **rGetCoordinatesFromFile**(file, sample)
+> **getCoordinatesFromFile**(file, sample)
 
 Returns a matrix with the coordinates of pixels (X/Y).
 If there are multiple samples, they appear sequentially; that is, the matrix has as many rows as the cumulative number of pixels in each sample and two columns.

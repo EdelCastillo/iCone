@@ -183,7 +183,7 @@ NULL
 #' @name rGetIntensityFromFile()
 NULL
 
-#' @name rGetMassColumFromFile()
+#' @name rGetColumFromFile()
 NULL
 
 #'
@@ -214,8 +214,8 @@ rGetIntensityFromFile <- function(file, column) {
     .Call('_iCone_rGetIntensityFromFile', PACKAGE = 'iCone', file, column)
 }
 
-rGetMassColumnFromFile <- function(file, mass, sample) {
-    .Call('_iCone_rGetMassColumnFromFile', PACKAGE = 'iCone', file, mass, sample)
+rGetColumnFromFile <- function(file, mass, sample) {
+    .Call('_iCone_rGetColumnFromFile', PACKAGE = 'iCone', file, mass, sample)
 }
 
 peakMatrixR <- function(baseDir, params, mzLow, mzHigh, nThreads) {

@@ -277,16 +277,16 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// rGetMassColumnFromFile
-List rGetMassColumnFromFile(const char* file, float mass, int sample);
-RcppExport SEXP _iCone_rGetMassColumnFromFile(SEXP fileSEXP, SEXP massSEXP, SEXP sampleSEXP) {
+// rGetColumnFromFile
+List rGetColumnFromFile(const char* file, float mass, int sample);
+RcppExport SEXP _iCone_rGetColumnFromFile(SEXP fileSEXP, SEXP massSEXP, SEXP sampleSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const char* >::type file(fileSEXP);
     Rcpp::traits::input_parameter< float >::type mass(massSEXP);
     Rcpp::traits::input_parameter< int >::type sample(sampleSEXP);
-    rcpp_result_gen = Rcpp::wrap(rGetMassColumnFromFile(file, mass, sample));
+    rcpp_result_gen = Rcpp::wrap(rGetColumnFromFile(file, mass, sample));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -428,7 +428,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_iCone_rGetCoordinatesFromFile", (DL_FUNC) &_iCone_rGetCoordinatesFromFile, 2},
     {"_iCone_rGetMassVectorFromFile", (DL_FUNC) &_iCone_rGetMassVectorFromFile, 1},
     {"_iCone_rGetIntensityFromFile", (DL_FUNC) &_iCone_rGetIntensityFromFile, 2},
-    {"_iCone_rGetMassColumnFromFile", (DL_FUNC) &_iCone_rGetMassColumnFromFile, 3},
+    {"_iCone_rGetColumnFromFile", (DL_FUNC) &_iCone_rGetColumnFromFile, 3},
     {"_iCone_peakMatrixR", (DL_FUNC) &_iCone_peakMatrixR, 5},
     {"_iCone_rawToGaussiansR", (DL_FUNC) &_iCone_rawToGaussiansR, 8},
     {"_iCone_rGetBasicInfo", (DL_FUNC) &_iCone_rGetBasicInfo, 3},

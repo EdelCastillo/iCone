@@ -244,7 +244,7 @@ NumericVector rGetMassVectorFromFile(const char* file)
    return ret;  
  }
 
-//' @name rGetMassColumFromFile()
+//' @name rGetColumFromFile()
  //' @title returns a column information of the peak matrix: 
  //' 
  //' @param file     -> file name with peak matrix (tmpPeakMatrix.bin)
@@ -258,7 +258,7 @@ NumericVector rGetMassVectorFromFile(const char* file)
  //' pixelsSupport: number of pixels in column with non-zero intensity. 
 
  // [[Rcpp::export]]
- List rGetMassColumnFromFile(const char* file, float mass, int sample)
+ List rGetColumnFromFile(const char* file, float mass, int sample)
  {
    std::fstream fp;
    std::streampos ionPos, colSize, offset;
