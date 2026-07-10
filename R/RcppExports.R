@@ -172,12 +172,18 @@ rGetPixelGaussians <- function(ibdFname, imzML, params, mzLow, mzHigh, pixel) {
 
 #' @name rGetMetaDataFromFile
 #' @title returns generic information about the peak matrix located in a file.
-#' @param file -> file name with peak matrix
+#' @param file -> file name with peak matrix (tmpPeakMatrix.bin)
 #' @return a list:
 #'   nSamples     -> number of samples analyzed.
 #'   totalPx      -> total number of pixels (cumulative of each sample).
 #'   nIons        -> number of columns in the matrix.
 #'   pixelsSample -> vector with the pixels in each sample.
+NULL
+
+#' @name rGetIntensityFromFile()
+NULL
+
+#' @name rGetMassColumFromFile()
 NULL
 
 #'
@@ -191,24 +197,25 @@ rGetMetaDataFromFile <- function(file) {
 #' @title returns a matrix with the coordinates of all pixels (X/Y).
 #' If there are multiple samples, they appear sequentially; that is, the matrix has as many rows 
 #' as the cumulative number of pixels in each sample and two columns.
-#' @param file   -> file name with peak matrix
+#' @param file   -> file name with pixels coordinates (tmpPixelsCoordinates.bin)
 #' @param sample -> just download the pixels from this sample.
+#'                 if sample < 0, all sample coordinates are returned
 #' @return a matrix with the coordinates (X/Y) of pixels.
 #' 
 rGetCoordinatesFromFile <- function(fileName, sample) {
     .Call('_iCone_rGetCoordinatesFromFile', PACKAGE = 'iCone', fileName, sample)
 }
 
-rGetColumFromFile <- function(file, column) {
-    .Call('_iCone_rGetColumFromFile', PACKAGE = 'iCone', file, column)
-}
-
 rGetMassVectorFromFile <- function(file) {
     .Call('_iCone_rGetMassVectorFromFile', PACKAGE = 'iCone', file)
 }
 
-rGetMassColumFromFile <- function(file, mass, massVect, sample) {
-    .Call('_iCone_rGetMassColumFromFile', PACKAGE = 'iCone', file, mass, massVect, sample)
+rGetIntensityFromFile <- function(file, column) {
+    .Call('_iCone_rGetIntensityFromFile', PACKAGE = 'iCone', file, column)
+}
+
+rGetMassColumnFromFile <- function(file, mass, sample) {
+    .Call('_iCone_rGetMassColumnFromFile', PACKAGE = 'iCone', file, mass, sample)
 }
 
 peakMatrixR <- function(baseDir, params, mzLow, mzHigh, nThreads) {

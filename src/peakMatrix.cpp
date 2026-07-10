@@ -25,7 +25,7 @@ std::mutex gMutex;
 
 //' @name rGetMetaDataFromFile
 //' @title returns generic information about the peak matrix located in a file.
-//' @param file -> file name with peak matrix
+//' @param file -> file name with peak matrix (tmpPeakMatrix.bin)
 //' @return a list:
 //'   nSamples     -> number of samples analyzed.
 //'   totalPx      -> total number of pixels (cumulative of each sample).
@@ -67,8 +67,9 @@ List rGetMetaDataFromFile(const char* file)
 //' @title returns a matrix with the coordinates of all pixels (X/Y).
 //' If there are multiple samples, they appear sequentially; that is, the matrix has as many rows 
 //' as the cumulative number of pixels in each sample and two columns.
-//' @param file   -> file name with peak matrix
+//' @param file   -> file name with pixels coordinates (tmpPixelsCoordinates.bin)
 //' @param sample -> just download the pixels from this sample.
+//'                 if sample < 0, all sample coordinates are returned
 //' @return a matrix with the coordinates (X/Y) of pixels.
 //' 
 // [[Rcpp::export]]
@@ -158,50 +159,12 @@ NumericMatrix rGetCoordinatesFromFile(const char* fileName, int sample)
 }
 
 
- //' @name rGetColumFromFile()
- //' @title returns a column of the peak matrix: 
- //' 
- //' @param file -> file name with peak matrix
- //' @param column -> desired column (first = 1)
- //' @return a vector with intensity of each pixel, m/z, mass resolution and number of pixels with non-zero magnitude.
- 
-  // [[Rcpp::export]]
-NumericVector rGetColumFromFile(const char* file, int column)
-{
-  std::fstream fp;
-  std::streampos pos, colSize;
-  int nSamples, totalPx, nIons;
-  
-  fp.open(file, std::fstream::in | std::ios::binary);
-  if(!fp.is_open())
-    {
-      char txt[200];
-      sprintf(txt, "Error: The internal %s file could not be created.\n The peak matrix cannot be saved.\n", file);
-      throw std::runtime_error(txt);
-    }
-    fp.read((char*)&nSamples, sizeof(int)); //samples number
-    fp.read((char*)&totalPx,  sizeof(int)); //total pixels in all samples
-    fp.read((char*)&nIons,    sizeof(int)); //ions number
-
-    colSize=((totalPx+2)*sizeof(float)+sizeof(int));
-    pos=3*sizeof(int)+nSamples*sizeof(int)+(column-1)*colSize;
-    
-    NumericVector ret(totalPx+3);
-    float intensity;
-    int pxSupport;
-    fp.seekg(pos, std::ios_base::beg);
-    for(int i=0; i<totalPx+3; i++)
-    {
-        fp.read((char*)&intensity, sizeof(float));
-        ret[i]=intensity;
-    }
-    fp.close();
-    return ret;  
-}
 
  //' @name rGetMassVectorFromFile()
  //' @title returns a vector with all the masses in peak matrix 
-
+ //' @param file -> file name with peak matrix (tmpPeakMatrix.bin)
+ //' @return mass vector
+ //' 
  // [[Rcpp::export]]
 NumericVector rGetMassVectorFromFile(const char* file)
  {
@@ -240,27 +203,19 @@ NumericVector rGetMassVectorFromFile(const char* file)
    return massVect;
  }
 
- //' @name rGetMassColumFromFile()
- //' @title returns a column information of the peak matrix: 
+//' @name rGetIntensityFromFile()
+ //' @title returns a column whit pixels intensities from the peak matrix: 
  //' 
- //' @param file     -> file name with peak matrix
- //' @param mass     -> reference to the desired initial column of the peak matrix (Da).
- //' @param massVect -> mass vector. If massVect size is not equal to matrix mass vector, the algorithm's efficiency decreases.
- //' @param sample   -> just download the pixels from this sample.
- //' @return a list:
- //'     intensity: vector of intesities 
- //'          mass: mass associated with the column of peakMatrix.
- //'massResolution: final mass resolution at centroid.
- //' pixelsSupport: number of pixels in column with non-zero intensity. 
-
+ //' @param file -> file name with peak matrix (tmpPeakMatrix.bin)
+ //' @param column -> desired column (first = 1)
+ //' @return a vector with intensity of each pixel.
+ 
  // [[Rcpp::export]]
- List rGetMassColumFromFile(const char* file, float mass, NumericVector massVect, int sample)
+ NumericVector rGetIntensityFromFile(const char* file, int column)
  {
    std::fstream fp;
-   std::streampos ionPos, colSize, offset;
-   int nSamples, totalPx, nIons, massIndex;
-   int pxSample[nSamples];
-   Common common;
+   std::streampos pos, colSize;
+   int nSamples, totalPx, nIons;
    
    fp.open(file, std::fstream::in | std::ios::binary);
    if(!fp.is_open())
@@ -272,6 +227,56 @@ NumericVector rGetMassVectorFromFile(const char* file)
    fp.read((char*)&nSamples, sizeof(int)); //samples number
    fp.read((char*)&totalPx,  sizeof(int)); //total pixels in all samples
    fp.read((char*)&nIons,    sizeof(int)); //ions number
+   
+   colSize=((totalPx+2)*sizeof(float)+sizeof(int));
+   pos=3*sizeof(int)+nSamples*sizeof(int)+(column-1)*colSize;
+   
+   NumericVector ret(totalPx+3);
+   float intensity;
+   int pxSupport;
+   fp.seekg(pos, std::ios_base::beg);
+   for(int i=0; i<totalPx+3; i++)
+   {
+     fp.read((char*)&intensity, sizeof(float));
+     ret[i]=intensity;
+   }
+   fp.close();
+   return ret;  
+ }
+
+//' @name rGetMassColumFromFile()
+ //' @title returns a column information of the peak matrix: 
+ //' 
+ //' @param file     -> file name with peak matrix (tmpPeakMatrix.bin)
+ //' @param mass     -> reference to the desired initial column of the peak matrix (Da).
+ //' @param sample   -> just download the pixels from this sample.
+ //'                 if sample < 0, all sample coordinates are returned
+ //' @return a list:
+ //'     intensity: vector of intesities 
+ //'          mass: mass associated with the column of peakMatrix.
+ //'massResolution: final mass resolution at centroid.
+ //' pixelsSupport: number of pixels in column with non-zero intensity. 
+
+ // [[Rcpp::export]]
+ List rGetMassColumnFromFile(const char* file, float mass, int sample)
+ {
+   std::fstream fp;
+   std::streampos ionPos, colSize, offset;
+   int nSamples, totalPx, nIons, massIndex;
+   Common common;
+   
+   fp.open(file, std::fstream::in | std::ios::binary);
+   if(!fp.is_open())
+   {
+     char txt[200];
+     sprintf(txt, "Error: The internal %s file could not be created.\n The peak matrix cannot be saved.\n", file);
+     throw std::runtime_error(txt);
+   }
+
+   fp.read((char*)&nSamples, sizeof(int)); //samples number
+   fp.read((char*)&totalPx,  sizeof(int)); //total pixels in all samples
+   fp.read((char*)&nIons,    sizeof(int)); //ions number
+   int pxSample[nSamples];
    fp.read((char*)pxSample,  nSamples*sizeof(int)); //px in each sample
    
    if(sample>nSamples)
@@ -283,25 +288,19 @@ NumericVector rGetMassVectorFromFile(const char* file)
    
    colSize=(totalPx+3)*sizeof(float); //size of column
    offset=3*sizeof(int)+nSamples*sizeof(int); //file header
-
-   //get the mass vector if it has not been passed.
+   
+   //get the mass vector.
    float* tmpMassVect=0;
    tmpMassVect=new float[nIons];
-   int massVectSize=massVect.length();
-   if(massVectSize != nIons)  //get mass vector from file
-   {
+   int massVectSize;
+
    for(int i=0; i<nIons; i++)
      {
        ionPos=offset+(i*colSize);
        fp.seekg(ionPos, std::ios_base::beg);  
        fp.read((char*)(tmpMassVect+i), sizeof(float));
      }
-   }
-   else
-   {
-     for(int i=0; i<nIons; i++)
-       tmpMassVect[i]=massVect(i);
-   }
+   
    if(mass<tmpMassVect[0] || mass>tmpMassVect[nIons-1])
      printf("warning: mass is out of range (%.4f/%.4f)\n", tmpMassVect[0], tmpMassVect[nIons-1]);
    

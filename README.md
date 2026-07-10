@@ -182,17 +182,6 @@ Returns generic information about the peak matrix temporary file.
    pixelsSample -> vector with the pixels in each sample.
 ```
 
-> **rGetColumFromFile**(file, column)
-
-Returns a column of the peak matrix:
-
-**Description of the parameters:**   
-```
-      file: file name with peak matrix (tmpPeakMatrix.bin)
-    column: matrix column
-    return: a vector with intensity of each pixel, m/z, mass resolution and number of pixels with non-zero magnitude.
-```
-
 > **GetMassVectorFromFile**(file)
 
 Returns a vector with all the masses in peak matrix 
@@ -202,21 +191,32 @@ Returns a vector with all the masses in peak matrix
       file: file name with peak matrix (tmpPeakMatrix.bin)
     return: mass vector
  ```
-> **rGetMassColumFromFile**(file, mass, massVect, sample)
+> **rGetMassColumFromFile**(file, mass, sample)
 
 Returns a column information of the peak matrix
 
 **Description of the parameters:**   
 ```
- file     -> file name with peak matrix
+ file     -> file name with peak matrix (tmpPeakMatrix.bin)
  mass     -> reference to the desired initial column of the peak matrix (Da).
- massVect -> mass vector. If massVect size is not equal to matrix mass vector, the algorithm's efficiency decreases.
  sample   -> just download the pixels from this sample.
+             if sample < 0, all sample coordinates are returned
  return a list:
       intensity: vector of intesities 
            mass: mass associated with the column of peakMatrix.
  massResolution: final mass resolution at centroid.
   pixelsSupport: number of pixels in column with non-zero intensity. 
+```
+
+> **rGetIntensityFromFile**(file, column)
+
+returns a column whit pixels intensities from the peak matrix
+
+**Description of the parameters:**   
+```
+      file: file name with peak matrix (tmpPeakMatrix.bin)
+    column: matrix column
+    return: a vector with intensity of each pixel.
 ```
 
 > **rGetCoordinatesFromFile**(file, sample)
@@ -278,13 +278,3 @@ Display information from tree spectra on the same plot.
       finalMass: Final   mass to consider.
 ```
 
-> **rPlotIon**(peakMatrix, mz)
-
-Display the spatial distribution of intensities for a given mz.
-Observation: very rudimentary.
-
-**Description of the parameters:**   
-```
-    peakMatrix: information returned by the getPeakMatrix() function. 
-            mz: centroid to be visualized (Da)
-```

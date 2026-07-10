@@ -268,7 +268,7 @@ getPeakMatrix<-function(data_file,
   #load ion by ion (This reduces the memory required)
   for(ion in 1:metaInfo$nIons)
   {
-    tmpIon=rGetColumFromFile(fileA, ion)
+    tmpIon=rGetIntensityFromFile(fileA, ion)
     mass[ion]=tmpIon[1];
     massResolution[ion]=tmpIon[2];
     pxSupport[ion]=tmpIon[3];
@@ -590,18 +590,112 @@ getGaussiansFromSpectrum<-function(
     return(Gauss)
 }
 
-#' @export
-getPeakMatrixFromFile<-function(data_file, ion)
-{
-col=rGetColumFromFile(data_file, ion);
-return(col)
-}
+#' @name getPeakMatrixFromFile
+#' @title return the peak matrix into file
+#' @param file -> file name with peak matrix (tmpPeakMatrix.bin)
+#' @return a list:
+#'     peakMatrix: Matrix of peak (centroids) rows = pixels, columns = intensity of each pixel.
+#'           mass: Vector with the masses associated with each column of peakMatrix.
+#' massResolution: mass resolution associated with each mass.
+#'  pixelsSupport: Vector with the number of pixels in each column with non-zero intensity. 
 
 #' @export
-getMetaDataFromFile<-function(data_file)
+getPeakMatrixFromFile<-function(file)
 {
-  return(rGetMetaDataFromFile(data_file));
+metaInfo=rGetMetaDataFromFile(file) #generic information from peak matrix
+
+pkMatrix=matrix(ncol=metaInfo$nIons, nrow=metaInfo$totalPx);
+mass=vector(length = metaInfo$nIons)
+massResolution=vector(length = metaInfo$nIons)
+pxSupport=vector(length = metaInfo$nIons)
+
+#load ion by ion (This reduces the memory required)
+for(ion in 1:metaInfo$nIons)
+{
+  tmpIon=rGetIntensityFromFile(file, ion)
+  mass[ion]=tmpIon[1];
+  massResolution[ion]=tmpIon[2];
+  pxSupport[ion]=tmpIon[3];
+  pkMatrix[,ion]=tmpIon[4:length(tmpIon)]
 }
+peakMatrix <- list("peakMatrix" = pkMatrix, "mass" = mass, "massResolution" = massResolution,
+                   "pixelsSupport"=pxSupport) 
+return(peakMatrix)
+}
+
+#' @name rGetMetaDataFromFile
+#' @title returns generic information about the peak matrix located in a file.
+#' @param file -> file name with peak matrix  (tmpPeakMatrix.bin)
+#' @return a list:
+#'   nSamples     -> number of samples analyzed.
+#'   totalPx      -> total number of pixels (cumulative of each sample).
+#'   nIons        -> number of columns in the matrix.
+#'   pixelsSample -> vector with the pixels in each sample.
+#'
+#' @export
+getMetaDataFromFile<-function(file)
+{
+  return(rGetMetaDataFromFile(file));
+}
+
+#' @name rGetIntensityFromFile()
+#' @title returns a column with pixel intensities from the peak matrix: 
+#' 
+#' @param file -> file name with peak matrix (tmpPeakMatrix.bin)
+#' @param column -> desired column (first = 1)
+#' @return a vector with intensity of each pixel, m/z, mass resolution and number of pixels with non-zero magnitude.
+
+#' @export
+getIntensityFromFile<-function(file, column)
+{
+  return (rGetIntensityFromFile(file, column))
+}
+
+#' @name rGetMassVectorFromFile()
+#' @title returns a vector with all the masses in peak matrix 
+#' @param file     -> file name with peak matrix (tmpPeakMatrix.bin)
+#' @return mass vector
+
+#' @export
+getMassVectorFromFile<-function(file)
+{
+  return (rGetMassVectorFromFile(file))
+}
+
+#' @name rGetMassColumnFromFile()
+#' @title returns a column information of the peak matrix: 
+#' 
+#' @param file     -> file name with peak matrix (tmpPeakMatrix.bin)
+#' @param mass     -> reference to the desired initial column of the peak matrix (Da).
+#' @param sample   -> just download the pixels from this sample.
+#'                 if sample < 0, all sample coordinates are returned
+#' @return a list:
+#'     intensity: vector of intesities 
+#'          mass: mass associated with the column of peakMatrix.
+#'massResolution: final mass resolution at centroid.
+#' pixelsSupport: number of pixels in column with non-zero intensity. 
+#' 
+#' @export
+getMassColumnFromFile<-function(file, mass, sample)
+{
+  return (rGetMassColumnFromFile(file, mass, sample))
+}
+
+#' @name rGetCoordinatesFromFile()
+#' @title returns a matrix with the coordinates of all pixels (X/Y).
+#' If there are multiple samples, they appear sequentially; that is, the matrix has as many rows 
+#' as the cumulative number of pixels in each sample and two columns.
+#' @param file   -> file name with pixels coordinates (tmpPixelsCoordinates.bin)
+#' @param sample -> just download the pixels from this sample.
+#'                  if sample < 0, all sample coordinates are returned
+#' @return a matrix with the coordinates (X/Y) of pixels.
+#' 
+#' @export
+getCoordinatesFromFile<-function(file, sample)
+{
+return(rGetCoordinatesFromFile(file, sample))
+}
+
 
 #//////////////////////////////////////////////////////////////
 #' uuid.
