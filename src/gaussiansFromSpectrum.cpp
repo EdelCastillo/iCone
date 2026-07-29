@@ -29,8 +29,8 @@
  //'  @param params:    specific parameters
  //'              "SNR": signal-to-noise ratio
  //'      "noiseMethod": method for estimating noise.
- //'  @param  mzLow:  lower mass to consider
- //'  @param  mzHigh: higher mass to consider
+ //'  @param  mzLow:  lower mass to consider  (if mzLow=0   mzLow =min(mz))
+ //'  @param  mzHigh: higher mass to consider (if mzHuigh=0 mzHigh=max(mz))
  //'  @return List: gaussians, mass intensity, SNR, noise
  //'       gaussians: matrix with parameters for each Gaussian (mean, sigma, intensity)
  //'            mass: vector with the masses of the raw spectrum
@@ -41,6 +41,9 @@
  // [[Rcpp::export]]
 List rGetGaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp::NumericVector mz, Rcpp::List params, float mzLow, float mzHigh)
 {
+  if(mzLow==0) mzLow=mz[0];
+  if(mzHigh==0) mzHigh=mz[mz.length()-1];
+  
   //class constructor
   GaussiansFromSpectrum gaussSp(intensity, mz, params, mzLow, mzHigh);  
   
@@ -62,11 +65,7 @@ GaussiansFromSpectrum::GaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp
   m_exit=true;
   m_noiseEst_p=0;
   
-  //information capture
-  Rcpp::DataFrame df;
-
   //dimensioned
-//  NumericVector mzLength=df["mzLength"];
   m_spectro.mass_p=0;
   m_spectro.int_p=0;
   m_spectro.SNR_p=0;
@@ -97,7 +96,7 @@ GaussiansFromSpectrum::GaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp
   nv=params["SNR"];
   m_SNR=nv[0];
   if(m_SNR<=0) m_SNR=1;
-  
+
   cv=params["noiseMethod"];
   String tmpStr=cv[0];
   const char* SNRmethod=tmpStr.get_cstring(); //conversion C
@@ -178,7 +177,7 @@ int GaussiansFromSpectrum::rawToGaussians()
     //SNR
     m_noise=m_noiseEst_p->getSNR(m_spectro.tmpInt_p, m_spectro.size,  m_spectro.tmpSNR_p);
     m_spectro.noise=m_noise;
-
+    
     //the spectrum is limited to the range of interest.
     iMzLow =common.nearestIndex(m_mzLow,  m_spectro.tmpMass_p, spSize); //low index
     iMzHigh=common.nearestIndex(m_mzHigh, m_spectro.tmpMass_p, spSize); //high index

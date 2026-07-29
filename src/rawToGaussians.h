@@ -33,7 +33,6 @@
 #include "common_methods.h"
 #include <stdlib.h>
 #include "noiseestimation.h"
-#include "common_methods.h"
 #include <fstream>
 
 using namespace Rcpp;

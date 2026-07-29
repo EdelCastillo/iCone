@@ -19,9 +19,9 @@ getAverageSpectrum(
 \arguments{
 \item{data_file:}{absolute reference to the file with the imzML extension.}
 
-\item{initMass:}{lower mass to consider}
+\item{initMass:}{Initial  mass to consider. By default, the minimum value from the entire range of masses is used.}
 
-\item{finalMass:}{higher mass to consider}
+\item{finalMass:}{Final    mass to consider. By default, the maximum value from the entire range of masses is used.}
 
 \item{pxList:}{list of pixels. First pixel=1. By default everyone.}
 

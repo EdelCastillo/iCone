@@ -199,7 +199,11 @@
  List rGetAverageGaussianSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, float overSampling, int nThreads)
  {
    gPeakCount=0, gSpectra=0;
-   RawToGaussians gauss(0, ibdFname, imzML, params, pxList, mzLow, mzHigh, nThreads);  
+   char dir[200];
+   Common common;
+   common.getFileNameDirectory(ibdFname, dir);
+   
+   RawToGaussians gauss(dir, ibdFname, imzML, params, pxList, mzLow, mzHigh, nThreads);  
    if(gauss.m_hit==false) return 0;
    
    //loads data from a file and converts its peak into Gaussians.
@@ -231,9 +235,13 @@
  // [[Rcpp::export]]
  List rGetAverageSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, float overSampling)
  {
-   RawToGaussians gauss(0, ibdFname, imzML, params, pxList, mzLow, mzHigh, 1);  
+  char dir[200];
+  Common common;
+  common.getFileNameDirectory(ibdFname, dir);
+  
+   RawToGaussians gauss(dir, ibdFname, imzML, params, pxList, mzLow, mzHigh, 1);  
    if(gauss.m_hit==false) return 0;
-   
+  
    List ret=gauss.getMeanSpectrum(gauss.m_massResolution, (int)overSampling);
    return ret;
  }

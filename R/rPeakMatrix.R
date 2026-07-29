@@ -209,6 +209,12 @@ getPeakMatrix<-function(data_file,
       if(lowMz <minMass) minMass=lowMz
       if(highMz>maxMass) maxMass=highMz
       
+      if(lowMz>highMz)
+      {
+        cat("warning: the lower mass exceeds the upper mass.\n")
+        return(0)
+      }
+      
      #imzML file to Gaussians (for each sample).
      nPixels=rawToGaussiansR(baseDir, file, in_img$data$imzML, params, lowMz, highMz, pxList-1, nThreads);
      totalPixels=totalPixels+nPixels;
@@ -294,8 +300,8 @@ getPeakMatrix<-function(data_file,
 #'      "massResolution": mass resolution with which the spectra were acquired (mz/deltaMz).
 #'                 "SNR": signal-to-noise ratio
 #'         "noiseMethod": method for estimating noise.
-#' @param initMass:  lower mass to consider
-#' @param finalMass: higher mass to consider
+#' @param initMass:  Initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+#' @param finalMass: Final    mass to consider. By default, the maximum value from the entire range of masses is used.
 #' @param pixel:    spectrum to evaluate. First pixel=1
 #' @param imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
 #' @param fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
@@ -308,7 +314,7 @@ getPeakMatrix<-function(data_file,
 #'        noise: noise estimation.
 #' @export
 getPixelGaussians<-function(data_file,
-                        params,
+                        params=c(),
                         initMass=0,
                         finalMass=0,
                         pixel=1,
@@ -319,34 +325,40 @@ getPixelGaussians<-function(data_file,
   {
     stop("File not found\n")
   }
-  
-  #control de parámetros
-  if(!(exists("SNR", where=params)))
+  if(length(params)==0)
   {
-    cat("warning: by default, SNR parameter will be 1.\n")
-    params=c(params, "SNR"=1)
+    params=list("SNR"=1, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "linkedPeaks"=3, "massResolution"=30000)
+    cat("defect parameters: SNR=1, noiseMethod=estnoise_mad, minPixelsSupport=1, linkedPeaks=3, massResolution=30000\n")
   }
-  if(!(exists("minPixelsSupport", where=params)))
+  else
   {
-    cat("warning: by default, minPixelsSupport parameter will be 1%.\n")
-    params=c(params, "minPixelsSupport"=1)
+    #control de parámetros
+    if(!(exists("SNR", where=params)))
+    {
+      cat("warning: by default, SNR parameter will be 1.\n")
+      params=c(params, "SNR"=1)
+    }
+    if(!(exists("minPixelsSupport", where=params)))
+    {
+      cat("warning: by default, minPixelsSupport parameter will be 1%.\n")
+      params=c(params, "minPixelsSupport"=1)
+    }
+    if(!(exists("noiseMethod", where=params)))
+    {
+      cat("warning: by default, noiseMethod will be MAD type.\n")
+      params=c(params, "noiseMethod"="estnoise_mad")
+    }
+    if(!(exists("massResolution", where=params)))
+    {
+      cat("ERROR: massResolution parameter is required.\n") 
+      return (0)
+    }
+    if(params$massResolution<=0)
+    {
+      cat("ERROR: massResolution must be greater than zero.\n") 
+      return (0)
+    }
   }
-  if(!(exists("noiseMethod", where=params)))
-  {
-    cat("warning: by default, noiseMethod will be MAD type.\n")
-    params=c(params, "noiseMethod"="estnoise_mad")
-  }
-  if(!(exists("massResolution", where=params)))
-  {
-    cat("ERROR: massResolution parameter is required.\n") 
-    return (0)
-  }
-  if(params$massResolution<=0)
-  {
-    cat("ERROR: massResolution must be greater than zero.\n") 
-    return (0)
-  }
-  
   imgData <- NULL
   
 
@@ -363,18 +375,27 @@ getPixelGaussians<-function(data_file,
     
     #binary data file name.
     file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
-    if(initMass>finalMass)
+    
+    #dimensioned (lowMz, highMz)
+    basicInfo=rGetBasicInfo(file, in_img$data$imzML, pixel-1)
+    if(initMass ==0 || initMass<basicInfo$minMz  || initMass>basicInfo$maxMz)   {lowMz =basicInfo$minMz;}
+    else {lowMz=initMass}
+    if(finalMass==0 || finalMass>basicInfo$maxMz || finalMass<basicInfo$minMz)  {highMz=basicInfo$maxMz;}
+    else {highMz=finalMass}
+    
+    if(lowMz>highMz)
     {
       cat("warning: the lower mass exceeds the upper mass.\n")
-      initMass=finalMass
+      return(0)
     }
+    
     if(pixel<1) 
     {
       cat("warning: pixel must be greater than zero. Thus, pixels will be 1.\n")
       pixel=1;
     }
     #info about pixel (the first pixel is zero)
-    pxGauss<-rGetPixelGaussians(file, in_img$data$imzML, params, initMass, finalMass, pixel-1);
+    pxGauss<-rGetPixelGaussians(file, in_img$data$imzML, params, lowMz, highMz, pixel-1);
 
     pt<-proc.time() - pt
     display_processing_time(pt, "Data processing time")
@@ -392,8 +413,8 @@ getPixelGaussians<-function(data_file,
 #'      "massResolution": mass resolution with which the spectra were acquired (mz/deltaMz).
 #'                 "SNR": signal-to-noise ratio
 #'         "noiseMethod": method for estimating noise.
-#' @param initMass:   lower mass to consider
-#' @param finalMass:  higher mass to consider
+#' @param initMass:  Initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+#' @param finalMass: Final    mass to consider. By default, the maximum value from the entire range of masses is used.
 #' @param pxList:    list of pixels. First pixel=1. By default everyone.
 #' @param overSampling: interval between points on the mass axis = massResolution/overSampling.
 #' @param nThreads:  number of threads
@@ -405,7 +426,7 @@ getPixelGaussians<-function(data_file,
 #'     averageIntensity: array of average Gaussians values 
 #' @export
 getAverageGaussianSpectrum<-function(data_file,
-                         params,
+                         params=c(),
                          initMass=0,
                          finalMass=0,
                          pxList=c(0),
@@ -419,31 +440,39 @@ getAverageGaussianSpectrum<-function(data_file,
     stop("File not found\n")
   }
   
-  #control de parámetros
-  if(!(exists("SNR", where=params)))
+  if(length(params)==0)
   {
-    cat("warning: by default, SNR parameter will be 1.\n")
-    params=c(params, "SNR"=1)
+    params=list("SNR"=1, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "linkedPeaks"=3, "massResolution"=30000)
+    cat("defect parameters: SNR=1, noiseMethod=estnoise_mad, minPixelsSupport=1, linkedPeaks=3, massResolution=30000\n")
   }
-  if(!(exists("minPixelsSupport", where=params)))
+  else
   {
-    cat("warning: by default, minPixelsSupport parameter will be 1%.\n")
-    params=c(params, "minPixelsSupport"=1)
-  }
-  if(!(exists("noiseMethod", where=params)))
-  {
-    cat("warning: by default, noiseMethod will be MAD type.\n")
-    params=c(params, "noiseMethod"="estnoise_mad")
-  }
-  if(!(exists("linkedPeaks", where=params)))
-  {
-    #cat("warning: by default, linkedPeaks parameter will be 3 sd.\n") 
-    params=c(params, "linkedPeaks"=3)
-  }
-  if(!(exists("massResolution", where=params)))
-  {
-    cat("ERROR: massResolution parameter is required.\n") 
-    return (0)
+    #control de parámetros
+    if(!(exists("SNR", where=params)))
+    {
+      cat("warning: by default, SNR parameter will be 1.\n")
+      params=c(params, "SNR"=1)
+    }
+    if(!(exists("minPixelsSupport", where=params)))
+    {
+      cat("warning: by default, minPixelsSupport parameter will be 1%.\n")
+      params=c(params, "minPixelsSupport"=1)
+    }
+    if(!(exists("noiseMethod", where=params)))
+    {
+      cat("warning: by default, noiseMethod will be MAD type.\n")
+      params=c(params, "noiseMethod"="estnoise_mad")
+    }
+    if(!(exists("linkedPeaks", where=params)))
+    {
+      #cat("warning: by default, linkedPeaks parameter will be 3 sd.\n") 
+      params=c(params, "linkedPeaks"=3)
+    }
+    if(!(exists("massResolution", where=params)))
+    {
+      cat("ERROR: massResolution parameter is required.\n") 
+      return (0)
+    }
   }
   if(params$massResolution<=0)
   {
@@ -466,13 +495,21 @@ getAverageGaussianSpectrum<-function(data_file,
     
     #binary data file name.
     file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
-    if(initMass>finalMass)
+    
+    #dimensioned (lowMz, highMz)
+    basicInfo=rGetBasicInfo(file, in_img$data$imzML, pxList-1)
+    if(initMass ==0 || initMass<basicInfo$minMz  || initMass>basicInfo$maxMz)   {lowMz =basicInfo$minMz;}
+    else {lowMz=initMass}
+    if(finalMass==0 || finalMass>basicInfo$maxMz || finalMass<basicInfo$minMz)  {highMz=basicInfo$maxMz;}
+    else {highMz=finalMass}
+    
+    if(lowMz>highMz)
     {
       cat("warning: the lower mass exceeds the upper mass.\n")
-      initMass=finalMass
+      return(0)
     }
-
-    avSp=rGetAverageGaussianSpectrum(file, in_img$data$imzML, params, initMass, finalMass, pxList-1, overSampling, nThreads);
+    
+    avSp=rGetAverageGaussianSpectrum(file, in_img$data$imzML, params, lowMz, highMz, pxList-1, overSampling, nThreads);
 
     pt<-proc.time() - pt
     display_processing_time(pt, "Data processing time")
@@ -487,8 +524,8 @@ getAverageGaussianSpectrum<-function(data_file,
 #' @title It obtains the average value of the intensities from all data into .imzML file.
 #'        Noise is not taken into account.
 #' @param data_file: absolute reference to the file with the imzML extension.
-#' @param initMass:   lower mass to consider
-#' @param finalMass:  higher mass to consider
+#' @param initMass:  Initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+#' @param finalMass: Final    mass to consider. By default, the maximum value from the entire range of masses is used.
 #' @param pxList:    list of pixels. First pixel=1. By default everyone.
 #' @param massResolution: mass resolution with which the spectra were acquired (mz/deltaMz).
 #' @param overSampling:  interval between points on the mass axis = massResolution/overSampling.
@@ -523,6 +560,8 @@ getAverageSpectrum<-function(data_file,
   
   pt<-proc.time()
   
+  baseDir=rGetDirectory(data_file)
+  
   fileExtension <- unlist(strsplit(basename(data_file), split = "\\."))
   fileExtension <- as.character(fileExtension[length(fileExtension)])
   if( fileExtension == "imzML")
@@ -534,13 +573,21 @@ getAverageSpectrum<-function(data_file,
     
     #binary data file name.
     file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
-    if(initMass>finalMass)
+    
+    #dimensioned (lowMz, highMz)
+    basicInfo=rGetBasicInfo(file, in_img$data$imzML, pxList-1)
+    if(initMass ==0 || initMass<basicInfo$minMz  || initMass>basicInfo$maxMz)   {lowMz =basicInfo$minMz;}
+    else {lowMz=initMass}
+    if(finalMass==0 || finalMass>basicInfo$maxMz || finalMass<basicInfo$minMz)  {highMz=basicInfo$maxMz;}
+    else {highMz=finalMass}
+    
+    if(lowMz>highMz)
     {
       cat("warning: the lower mass exceeds the upper mass.\n")
-      initMass=finalMass
+      return(0)
     }
     
-    avSp=rGetAverageSpectrum(file, in_img$data$imzML, params, initMass, finalMass, pxList-1, overSampling);
+    avSp=rGetAverageSpectrum(file, in_img$data$imzML, params, lowMz, highMz, pxList-1, overSampling);
     
     pt<-proc.time() - pt
     display_processing_time(pt, "Data processing time")
@@ -555,8 +602,8 @@ getAverageSpectrum<-function(data_file,
 #' @title Form Gaussians over each peak of the given spectrum.
 #' @param Intensity:   vector with value associated with each mass point.
 #' @param mz:          vector with mass/charge information
-#' @param initMass:     lower mass to consider
-#' @param finalMass:    higher mass to consider
+#' @param initMass:  Initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+#' @param finalMass: Final    mass to consider. By default, the maximum value from the entire range of masses is used.
 #' @param SNR:         signal-to-noise ratio
 #' @param noiseMethod: method for estimating noise (estnoise_diff, estnoise_sd, estnoise_mad).
 #'
@@ -581,15 +628,21 @@ getGaussiansFromSpectrum<-function(
 
     params$SNR=SNR
     params$noiseMethod=noiseMethod
-
-  pt<-proc.time()
+  if(length(intensity) != length(mz))
+  {
+    cat("warning: vectors must have the same length.\n")
+    return(0)
+  }
+    pt<-proc.time()
   
     if(initMass>finalMass)
     {
       cat("warning: the lower mass exceeds the upper mass.\n")
       initMass=finalMass
     }
-    
+    if(initMass==0)  initMass =min(mz);
+    if(finalMass==0) finalMass=max(mz);
+  
     Gauss=rGetGaussiansFromSpectrum(intensity, mz, params, initMass, finalMass);
     
     pt<-proc.time() - pt
