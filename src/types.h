@@ -24,8 +24,8 @@
 #include <mutex>
 #include "GMM.h"
 
-#define MAX_THREADS 50
-#define MAX_SAMPLES 50
+#define MAX_THREADS 100
+#define MAX_SAMPLES 150
 
     typedef struct{
         int x, y;

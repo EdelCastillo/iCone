@@ -145,10 +145,10 @@ getPeakMatrix<-function(data_file,
     cat("warning: there is no valid file.\n")
     return(0);
   }
-  else if(nSamples>50)
+  else if(nSamples>150)
   {
-    cat("Warning: the maximum number of samples allowed has been reached. It is limited to 50.\n)");
-    nSamples=50;
+    cat("Warning: the maximum number of samples allowed has been reached. It is limited to 150.\n)");
+    nSamples=150;
   }
   
   baseDir=rGetDirectory(data_file[1])
