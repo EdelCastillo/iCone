@@ -199,7 +199,7 @@ rGetMetaDataFromFile <- function(file) {
 #' as the cumulative number of pixels in each sample and two columns.
 #' @param file   -> file name with pixels coordinates (tmpPixelsCoordinates.bin)
 #' @param sample -> just download the pixels from this sample.
-#'                 if sample < 0, all sample coordinates are returned
+#'                 if sample < 1, all sample coordinates are returned
 #' @return a matrix with the coordinates (X/Y) of pixels.
 #' 
 rGetCoordinatesFromFile <- function(fileName, sample) {
@@ -218,8 +218,8 @@ rGetColumnFromFile <- function(file, mass, sample) {
     .Call('_iCone_rGetColumnFromFile', PACKAGE = 'iCone', file, mass, sample)
 }
 
-peakMatrixR <- function(baseDir, params, mzLow, mzHigh, nThreads) {
-    .Call('_iCone_peakMatrixR', PACKAGE = 'iCone', baseDir, params, mzLow, mzHigh, nThreads)
+peakMatrixR <- function(baseDir, params, mzLow, mzHigh, nPixels, nThreads) {
+    .Call('_iCone_peakMatrixR', PACKAGE = 'iCone', baseDir, params, mzLow, mzHigh, nPixels, nThreads)
 }
 
 #'

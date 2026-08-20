@@ -11,7 +11,7 @@ rGetCoordinatesFromFile(fileName, sample)
 }
 \arguments{
 \item{sample}{-> just download the pixels from this sample.
-if sample < 0, all sample coordinates are returned}
+if sample < 1, all sample coordinates are returned}
 
 \item{file}{-> file name with pixels coordinates (tmpPixelsCoordinates.bin)}
 }

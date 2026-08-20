@@ -565,7 +565,8 @@ rPlotIon<-function(pMatrix, mz)
 {
   colors=c("red3", "red",  "orange1", "yellow", "forestgreen", "olivedrab", "yellowgreen", "cyan", "blue")
   ionIndex=which.min(abs(pMatrix$mass - mz))
-
+  cat(sprintf("nearest mz=%.5f\n", pMatrix$mass[ionIndex]))
+  
   intensity=pMatrix$peakMatrix[,ionIndex]
   coord=pMatrix$coordinates
   #maxInt=max(intensity)
@@ -577,8 +578,8 @@ rPlotIon<-function(pMatrix, mz)
   plot(X, Y,  type="p", col="white")
   for (i in 1:length(pMatrix$coordinates[,1]))
   {
-    A=intensity[i]/co;
-    A=9-(A%%9)
+    #A=intensity[i]/co;
+    A=9-(data[i]%%9)
     if(A>9) A=9;
     lines(X[i], Y[i], type="p", cex=0.5, col=colors[A])
   }

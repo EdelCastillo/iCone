@@ -56,7 +56,7 @@ public:
   //maxIter: Maximum number of iterations allowed.
   //convergenceValue: Average of squared deviations for convergence.
   //Sets m_error = true if the array is invalid.
-  KmeansR(float *data_p, int size, int maxIter, double convergenceValue=1e-4);
+  KmeansR(double *data_p, int size, int nCenters, int maxIter, double convergenceValue=1e-4);
   
   //Segmentation.
   //Initialization can operate in two ways: based on passed data or randomly.
@@ -65,7 +65,7 @@ public:
   //massInit_p: Pointer to initial data (if null, initialize randomly).
   //Sets m_kStruct.ifault to 1 if the algorithm does not converge. =-1 if the algorithm fails.
   //Returns 0 if OK.
-  int getClusters(int nClusters, float *massInit_p);
+  int getClusters(int nClusters, double *massInit_p);
   
   //destructor
   //frees reserved memory.  
@@ -79,8 +79,9 @@ public:
   
 private:  
   
-  float     *m_data_p;
+  double     *m_data_p;
   int       m_size,
+            m_nCenters,
             m_nClusters,
             m_maxIter;
   double    m_convergenceValue;

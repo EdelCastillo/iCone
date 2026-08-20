@@ -22,7 +22,7 @@
  extern int gProcSegments, gVez; //observers.
  extern std::mutex gMutex;
  int  gPeakCount, gSpectra, gError;
- float gMinMass, gMaxMass;
+ double gMinMass, gMaxMass;
 
 /// R METHODS ////////////////////////////////////////////////////////////////////////
 
@@ -34,7 +34,7 @@
  //'  @param imzML:     list with information extracted from the imzML file with import_imzML()
  //'  @param params:    specific parameters
  //'              "SNR": signal-to-noise ratio
- //'   "massResolution": mass resolution with which the spectra were acquired.
+ //'          tolerance: desired tolerance for the centroids (ppm)
  //'      "noiseMethod": method for estimating noise.
  //' "minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered.
  //'      "linkedPeaks": two peaks are considered linked if they are closer than the given standard deviation (by defect=3).   
@@ -45,7 +45,7 @@
  //'  @return number of pixels
  //'     
  // [[Rcpp::export]]
- int rawToGaussiansR(Rcpp::String baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, int nThreads)
+ int rawToGaussiansR(Rcpp::String baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, Rcpp::NumericVector pxList, int nThreads)
  {
    gPeakCount=0, gSpectra=0;
    char *directory=new char[200];
@@ -84,15 +84,14 @@
  // [[Rcpp::export]]
  List rGetBasicInfo(const char* ibdFname, Rcpp::List imzML, Rcpp::NumericVector pxList)
  {
-   List ret=0;
    //class for accessing imzML files.
    GetImzMLData *getImzMLData_p=0;
-   float *rawMzData=0;
+   double *rawMzData=0;
    Rcpp::DataFrame df;
    df=imzML["run"];
    bool continuous=imzML["continuous_mode"], hit;
    int nPixels, minPx, maxPx, maxMzLength=0, minMzLength=0x7FFFFFFF, massSize, px;
-   float minMz=1e32, maxMz=0;
+   double minMz=1e32, maxMz=0;
    
    NumericVector mzLength=df["mzLength"];
    
@@ -106,7 +105,7 @@
        if(mzLength[px]>maxMzLength) maxMzLength=mzLength[px]; //maximum spectrum length
        if(mzLength[px]<minMzLength) minMzLength=mzLength[px]; //minimum spectrum length
      }
-     rawMzData=new float[maxMzLength]; 
+     rawMzData=new double[maxMzLength]; 
      getImzMLData_p= new GetImzMLData(ibdFname, imzML);   
 
      for(int px=0; px<nPixels; px++)
@@ -148,7 +147,7 @@
        if(mzLength[px]>maxMzLength) maxMzLength=mzLength[px]; //maximum spectrum length
        if(mzLength[px]<minMzLength) minMzLength=mzLength[px]; //minimum spectrum length
      }
-     rawMzData=new float[maxMzLength]; 
+     rawMzData=new double[maxMzLength]; 
      getImzMLData_p= new GetImzMLData(ibdFname, imzML);   
      
      for(int i=0; i<nPixels; i++)
@@ -184,19 +183,19 @@
  //'  @param imzML:     list with information extracted from the imzML file with import_imzML()
  //'  @param params:    specific parameters
  //'              "SNR": signal-to-noise ratio
- //'   "massResolution": mass resolution with which the spectra were acquired.
+ //'          tolerance: desired tolerance for the centroids (ppm)
  //'      "noiseMethod": method for estimating noise.
  //'  @param mzLow:        lower  mass  to consider
  //'  @param mzHigh:       higher mass  to consider
  //'  @param pxList:       list of pixels. First pixel=1. By default everyone.
- //'  @param overSampling: interval between points on the mass axis = massResolution/overSampling.
+ //'  @param overSampling: interval between points on the mass axis = tolerance/overSampling.
  //'  @param nThreads:     number of threads suggested for parallel processing.
  //'  @return lista: averageMz and averageIntensity
- //'     averageMz: array of masses at intervals of 1/4 of the resolution
+ //'     averageMz: array of masses at intervals of 1/4 of the tolerance
  //'     averageIntensity: array of average values with all Gaussians 
  //'     
  // [[Rcpp::export]]
- List rGetAverageGaussianSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, float overSampling, int nThreads)
+ List rGetAverageGaussianSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, Rcpp::NumericVector pxList, double overSampling, int nThreads)
  {
    gPeakCount=0, gSpectra=0;
    char dir[200];
@@ -227,13 +226,13 @@
  //'  @param mzLow:        lower  mass  to consider
  //'  @param mzHigh:       higher mass  to consider
  //'  @param pxList:       list of pixels. First pixel=1. By default everyone.
- //'  @param overSampling: interval between points on the mass axis = massResolution/overSampling.
+ //'  @param overSampling: interval between points on the mass axis = tolerance/overSampling.
  //'  @return lista: averageMz and averageIntensity
- //'     averageMz: array of masses at intervals of mass resolution/overSampling
+ //'     averageMz: array of masses at intervals of mass tolerance/overSampling
  //'     averageIntensity: array of average values with all Gaussians 
  //'     
  // [[Rcpp::export]]
- List rGetAverageSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, Rcpp::NumericVector pxList, float overSampling)
+ List rGetAverageSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, Rcpp::NumericVector pxList, double overSampling)
  {
   char dir[200];
   Common common;
@@ -319,7 +318,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
  //Constructor
  //captures input information, allocates memory and initializes.
  ////////////////////////////////////////////////////////////////////////////////
- RawToGaussians::RawToGaussians(char *baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params, Rcpp::NumericVector pxList, float mzLow, float mzHigh, int nThreads)
+ RawToGaussians::RawToGaussians(char *baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params, Rcpp::NumericVector pxList, double mzLow, double mzHigh, int nThreads)
  {
    m_hit=true;
    m_mzLow=mzLow;
@@ -392,9 +391,9 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
    m_SNR=nv[0];
    if(m_SNR<=0) m_SNR=1;
    
-   nv=params["massResolution"];
-   m_massResolution=nv[0];
-   
+   nv=params["tolerance"]; //in ppm=1e6/massResolution
+   m_massResolution=1e6/nv[0];
+
    nv=params["minPixelsSupport"];
    m_pxSupport=nv[0]*m_NPixels/100.0;
    
@@ -465,12 +464,12 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
    //memory reservation and initialization.
    for(int i=0; i<m_nThreads; i++)
    {
-     m_spectro[i].int_p      =new float[m_maxMzLength];
-     m_spectro[i].mass_p     =new float[m_maxMzLength];
-     m_spectro[i].SNR_p      =new float[m_maxMzLength];
-     m_spectro[i].tmpMass_p  =new float[m_maxMzLength];
-     m_spectro[i].tmpInt_p   =new float[m_maxMzLength];
-     m_spectro[i].tmpSNR_p   =new float[m_maxMzLength];
+     m_spectro[i].int_p      =new double[m_maxMzLength];
+     m_spectro[i].mass_p     =new double[m_maxMzLength];
+     m_spectro[i].SNR_p      =new double[m_maxMzLength];
+     m_spectro[i].tmpMass_p  =new double[m_maxMzLength];
+     m_spectro[i].tmpInt_p   =new double[m_maxMzLength];
+     m_spectro[i].tmpSNR_p   =new double[m_maxMzLength];
      m_spectro[i].sort_p     =new int  [m_maxMzLength];
      m_spectro[i].mutexIn_p  =new std::mutex;
      m_spectro[i].mutexOut_p =new std::mutex;
@@ -502,6 +501,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
  //free reserved memory
  RawToGaussians::~RawToGaussians()
  {
+   return;
 //   printf("init peakMatrix destructor\n");
    if(m_gaussians_p)
    {
@@ -584,8 +584,8 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
    //For each spectrum, determine the intensity peak, the joined peak, and their Gaussians.
    for(int iPx=0; iPx<m_NPixels; ) 
    {
-     //indication of the progress of the process (10% resolution)
-     if((float)iPx/(float)m_NPixels>vez*0.1) {if(vez<10) printf("%d ", vez*10); vez++;}
+     //indication of the progress of the process (10% tolerance)
+     if((double)iPx/(double)m_NPixels>vez*0.1) {if(vez<10) printf("%d ", vez*10); vez++;}
      if(iPx==m_NPixels) break;
      
      //We load as many spectra as threads are used.
@@ -727,7 +727,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
        return -1;
      }
      //mass ordination.
-     common.sortUpF(m_spectro[spIndex].tmpMass_p+iMzLow, m_spectro[spIndex].sort_p, spSize);
+     common.sortUp(m_spectro[spIndex].tmpMass_p+iMzLow, m_spectro[spIndex].sort_p, spSize);
      
      //The part of interest is extracted from the mass, intensity and SNR vectors.
      for(int i=0; i<spSize; i++) 
@@ -846,10 +846,10 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
  //Returns the number of Gaussians or a value < 0 on failure.
  int RawToGaussians::getGaussians(int px, SPECTRO *spectro_p, GAUSS_PARAMS *gaussians_p)
  {
-   float *intSpectrum_p=spectro_p->int_p, *massSpectrum_p=spectro_p->mass_p;
+   double *intSpectrum_p=spectro_p->int_p, *massSpectrum_p=spectro_p->mass_p;
    int intSize=spectro_p->size;
    
-   float minMeanPxMag=spectro_p->noise*m_SNR; //minimum value to consider a peak as valid.
+   double minMeanPxMag=spectro_p->noise*m_SNR; //minimum value to consider a peak as valid.
    //class for conversion to Gaussians.
    GmmPeak gmmPeak(minMeanPxMag);
    
@@ -931,9 +931,9 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
 
  
  //Obtains the average values of the Gaussians on an artificial mass axis.
- //The mass axis is formed from the extreme masses to be considered and the desired resolution and overSampling.
+ //The mass axis is formed from the extreme masses to be considered and the desired tolerance and overSampling.
  //Returns a list with two arrays: averageMz and averageIntensity.
- List RawToGaussians::getMeanGaussianSpectrum(float resolution, int overSampling)
+ List RawToGaussians::getMeanGaussianSpectrum(double resolution, int overSampling)
  {
    double highMass, lowMass;
    int iLow, iHigh, px;
@@ -999,15 +999,15 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
  
  //Obtains the average values of the intensities on an artificial mass axis.
  //Noise is not taken into account.
- //The mass axis is formed from the extreme masses to be considered and the desired resolution and overSampling.
- //delta_mass=mzLow/(overSamplig*massResolution) where massResolution=mz/deltaMz
+ //The mass axis is formed from the extreme masses to be considered and the desired tolerance and overSampling.
+ //delta_mass=mzLow/(overSamplig*tolerance) where tolerance in ppm (1e6/massResolution)
  //Returns a list with two arrays: averageMz and averageIntensity.
- List RawToGaussians::getMeanSpectrum(float resolution, int overSampling)
+ List RawToGaussians::getMeanSpectrum(double resolution, int overSampling)
  {
    double highMass, lowMass;
    int iLow, iHigh, px, massSize;
    Common tools;
-   float *meanMassAxis_p=0;
+   double *meanMassAxis_p=0;
    
    if(overSampling==1 && m_NPixels==1)
    {
@@ -1033,7 +1033,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
    double deltaMass=(double)m_mzLow/(overSampling*resolution); 
    int massAxisSize=1+(m_mzHigh-m_mzLow)/deltaMass;
    
-   meanMassAxis_p= new float[massAxisSize];
+   meanMassAxis_p= new double[massAxisSize];
    
    int pxCount=0;
    for(int i=0; i<massAxisSize; i++) 

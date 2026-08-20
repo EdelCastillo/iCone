@@ -25,13 +25,14 @@
 //maxIter: Maximum number of iterations allowed.
 //convergenceValue: Average of squared deviations for convergence.
 //Sets m_error = true if the array is invalid.
-KmeansR::KmeansR(float *data_p, int size, int maxIter, double convergenceValue)
+KmeansR::KmeansR(double *data_p, int size, int nCenters, int maxIter, double convergenceValue)
 {
   m_error=0;
   m_convergenceValue=convergenceValue;
   m_size=size;
   m_maxIter=maxIter;
   m_data_p=data_p;
+  m_nCenters=nCenters;
   
   m_kStruct.clusters_p=0;
   m_kStruct.totss=0;
@@ -55,6 +56,7 @@ KmeansR::~KmeansR()
 //frees reserved memory.  
 void KmeansR::freeClusters()
 {
+  
   if(m_kStruct.clusters_p)
   {
     for(int i=0; i<m_kStruct.nClusters; i++)
@@ -77,11 +79,11 @@ void KmeansR::freeClusters()
 //massInit_p: Pointer to initial data (if null, initialize randomly).
 //Sets m_kStruct.ifault to 1 if the algorithm does not converge. =-1 if the algorithm fails.
 //Returns 0 if OK.
-int KmeansR::getClusters(int nClusters, float *massInit_p)
+int KmeansR::getClusters(int nClusters, double *massInit_p)
 {
   if(nClusters<=0 || m_size<=0) return -1;
   int *binIndex_p=0;
-  
+
   bool random=false;
   freeClusters(); //frees any previously reserved memory.
   if(!massInit_p) //if no initial masses are provided -> randomness.
@@ -131,7 +133,10 @@ int KmeansR::getClusters(int nClusters, float *massInit_p)
     if(random)
       centralMass_p[iCenter]=binIndex_p[iCenter];
     else
+    {
       centralMass_p[iCenter]=massInit_p[iCenter]; //past values
+      
+    }
   }
 
   int iter=0;
@@ -145,7 +150,7 @@ int KmeansR::getClusters(int nClusters, float *massInit_p)
     for(int iMass=0; iMass<m_size; iMass++)//for all the elements to consider
     {
       int minIndex=-1;
-      double minSqrDistance=1e10;
+      double minSqrDistance=1e20;
       for(int iCenter=0; iCenter<nClusters; iCenter++) //for all desired segments
       {
         double sqrDistance=(centralMass_p[iCenter]-m_data_p[iMass])*(centralMass_p[iCenter]-m_data_p[iMass]);
@@ -173,6 +178,7 @@ int KmeansR::getClusters(int nClusters, float *massInit_p)
     
     //quadratic variation with respect to the previous centroid.
     double var=(centralMass_p[iCenter]-centralMass2_p[iCenter])*(centralMass_p[iCenter]-centralMass2_p[iCenter]);
+    
     var*=(double)size/m_size; //is weighted based on its weight.
     varAcu+=var; //accumulated
   }

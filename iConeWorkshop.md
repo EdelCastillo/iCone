@@ -1,7 +1,7 @@
 ---
 title: "iCone_Workshop"
 author: "Esteban del Castillo"
-date: 'may, 2026'
+date: 'August, 2026'
 output: html_document
 ---
 
@@ -11,17 +11,17 @@ output: html_document
 
 > After the download, the following files should appear:
 
-For a mass resolution of 30k:
+For a tolerance of 33.33 ppm:
 ```
     231211_Au_P_MBr_cblm_30k.imzML
     231211_Au_P_MBr_cblm_30k.ibd 
 ```
-For a mass resolution of 60k:
+For a tolerance of 16.66 ppm:
 ```
     231211_Au_P_MBr_cblm_60k.imzML
     231211_Au_P_MBr_cblm_60k.ibd 
 ```
-For a mass resolution of 120k:
+For a tolerance of 8.33 ppm:
 ```
     231211_Au_P_MBr_cblm_120k.imzML 
     231211_Au_P_MBr_cblm_120k.ibd
@@ -32,9 +32,9 @@ For a mass resolution of 120k:
 
 > The first step is to create a list with the desired parameters. 
 > For example, to obtain the peak matrix corresponding to the 30k sample, with a signal-to-noise ratio of 3, using the 'estnoise_mad' algorithm for noise estimation, 
-with a mass resolution of 30k, a minimum number of supporting pixels of 10%, and a standard deviation of 3 (defect) to consider peaks as overlapping (those that are closest together).
+with a tolerance of 33.33 ppm, a minimum number of supporting pixels of 10%, and a standard deviation of 3 (defect) to consider peaks as overlapping (those that are closest together).
 ```
-> params30 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "massResolution"=30000)
+> params30 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "tolerance"=33.33)
 ```
 
 > The second step is to call the getPeakMatrix() function.
@@ -64,10 +64,10 @@ Vector with the masses associated with each column of peakMatrix.
 pk30k$mass[1:10] #vector with the m/z (Da) of the first ten centroids.
 ```
 
-### massResolution
-Mass resolution associated with each mass (mz/delta_mz).
+### tolerance
+Desired tolerance for the centroids (ppm)
 ```
-pk30k$massResolution[1:10] #vector with the mass resolutions of the first ten centroids.
+pk30k$tolerance[1:10] #vector with the tolerance of the first ten centroids.
 ```
 
 ### pixelsSupport
@@ -94,28 +94,28 @@ Vector with the size of the pixels (spatial resolution) in micrometers.
 pk30k$pixelSize_um
 ```
 
-## Accuracy of the centroids
-> To determine the accuracy of the m/z measurement reported by the getPeakMatrix() function, the results are compared with the same tissue samples analyzed at higher resolutions. Specifically, samples with 30k and 60k resolutions are compared with samples analyzed at 120k resolution.
+## Precision of the centroids
+> To determine the precision of the m/z measurement reported by the getPeakMatrix() function, the results are compared with the same tissue samples analyzed at higher resolutions. Specifically, samples with 30k and 60k resolutions are compared with samples analyzed at 120k resolution.
 
 ### obtaining the peak matrices
 ```
-> params30 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "massResolution"=30000)
+> params30 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "tolerance"=33.33)
 > pk30k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_30k.imzML", params30);
 
-> params60 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "massResolution"=60000)
+> params60 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "tolerance"=16.66)
 > pk60k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_60k.imzML", params60);
 
-> params120 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "massResolution"=120000)
+> params120 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "tolerance"=8.33)
 > pk120k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_120k.imzML", params120);
 ```
-### Accuracy
+### Precision
 
-> To compare the results, we use the `statisticalQuality()` function. It reports statistical values ​​regarding the deviation between the two m/z vectors being compared. This deviation is determined from the nearest centroids in the high-resolution sample to those in the low-resolution sample.
+> To compare the results, we use the `statisticalQuality()` function. It reports statistical values regarding the deviation between the two m/z vectors being compared. This deviation is determined from the nearest centroids in the high-resolution sample to those in the low-resolution sample.
 ```
 > statisticalQuality() arguments: 
 > mzRef       is the high-resolution centroid vector.
 > mzTest      is the low-resolution centroid vector.
-> resolution  indicates the minimum distance for the result to be considered a false positive (expressed in ppm).
+> tolerance  indicates the minimum distance for the result to be considered a false positive (expressed in ppm).
 
 > statisticalQuality() report: 
 > refSize   size of the high-resolution centroid vector.
@@ -136,9 +136,9 @@ refSize=9439  testSize=1010     mean=3.293  sigma=3.917  median=1.763  repes:1 (
 ### Summary
 To compare, for example, the 30k sample with the 120k sample, we will do the following:
 ```
-> params30 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "massResolution"=30000)
+> params30 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "tolerance"=33.33)
 > pk30k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_30k.imzML", params30);
-> params120 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "massResolution"=120000)
+> params120 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "tolerance"=8.33)
 > pk120k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_120k.imzML", params120);
 > statisticalQuality(pk120k$mass, pk30k$mass, 33.33)
   refSize=9439  testSize=1010     mean=3.293  sigma=3.917  median=1.763  repes:1 (0.1%)

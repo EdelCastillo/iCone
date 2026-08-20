@@ -22,7 +22,7 @@
 //Constructor:
 //Argument:
 //minPeakMagnitude -> minimum magnitude for a peak to be deconvolved
-GmmPeak::GmmPeak(float minPeakMagnitude)
+GmmPeak::GmmPeak(double minPeakMagnitude)
 {
     m_minPeakMagnitude=minPeakMagnitude;
     m_deconv_p=0;
@@ -70,8 +70,8 @@ void GmmPeak::setPeak(ION_INDEX *intPeak_p, int nIntPeak)
     m_sGmm.y=0;
     try
         {
-        m_sGmm.x=new float [nScans]; //mz
-        m_sGmm.y=new float [nScans]; //magnitude
+        m_sGmm.x=new double [nScans]; //mz
+        m_sGmm.y=new double [nScans]; //magnitude
         }
     catch(const std::bad_alloc& e)
         {
@@ -115,7 +115,7 @@ int GmmPeak::iniGMM()
 
     //sum of the magnitudes within the magnitude peak
     sumaMagMpeak=0;
-    float maxValue=0, tmpMag;
+    double maxValue=0, tmpMag;
     for(int i=0; i< mzSize; i++)
         {
         tmpMag=m_mag_p[i];
@@ -154,7 +154,7 @@ int GmmPeak::iniGMM()
       {m_sGmm.params[nGauss].weight=0; nGauss=0; break;}
       
         m_sGmm.params[nGauss].mean=magPeak_p->max-lowMzIndex;
-        m_sGmm.params[nGauss].sigma=((float)magPeak_p->high-magPeak_p->low)/2.0;
+        m_sGmm.params[nGauss].sigma=((double)magPeak_p->high-magPeak_p->low)/2.0;
         //m_sGmm.params[nGauss].weight=1; //sum_of_each_ion/sum_of_peak
         sumaMagEpeak=0; maxEpeak=0;
         for(int j=magPeak_p->low; j<=magPeak_p->high; j++)//isolated peak
@@ -174,7 +174,7 @@ int GmmPeak::iniGMM()
         m_sGmm.limits[nGauss].minMean=magPeak_p->low-lowMzIndex-2;
         if(m_sGmm.limits[nGauss].minMean<0) m_sGmm.limits[nGauss].minMean=0;
         m_sGmm.limits[nGauss].maxMean=magPeak_p->high-lowMzIndex+2;
-        float minSigma=0.5;
+        double minSigma=0.5;
         m_sGmm.limits[nGauss].minSigma=minSigma;
         m_sGmm.limits[nGauss].maxSigma=(m_sGmm.limits[nGauss].maxMean-m_sGmm.limits[nGauss].minMean)*1.0;
         if(m_sGmm.params[nGauss].sigma<=minSigma)  m_sGmm.params[nGauss].sigma=minSigma;
@@ -281,7 +281,7 @@ return m_nDeconv; //all good
 // mzAxisSize -> mz array size. It must coincide with the size of the magnitudes to be analyzed.
 //NOTA: si los scans son muy irregulares, puede no hacer una buena conversión!!!!
 //////////////////////////////////////////
-void GmmPeak::gaussConversion(GAUSSIAN *deconvIn_p, GAUSSIAN *deconvOut_p, float *mzAxis_p, int mzAxisSize)
+void GmmPeak::gaussConversion(GAUSSIAN *deconvIn_p, GAUSSIAN *deconvOut_p, double *mzAxis_p, int mzAxisSize)
 {
   double delta, delta1, delta2, offset, mean, sigma;
   int tmp;
@@ -302,15 +302,19 @@ void GmmPeak::gaussConversion(GAUSSIAN *deconvIn_p, GAUSSIAN *deconvOut_p, float
   {
     delta1=mzAxis_p[tmp+1]-mzAxis_p[tmp];//posterior delta.
     delta2=mzAxis_p[tmp]-mzAxis_p[tmp-1];//anterior delta.
-    delta=delta1<delta2?delta1:delta2;   //mínima distancia
+//    delta=delta1<delta2?delta1:delta2;   //mínima distancia
+    delta=delta1;
+    delta2=(delta1+delta2)/2.0;
   }
   else if(tmp==0) //origen eje de masas
   {
     delta=mzAxis_p[tmp+1]-mzAxis_p[tmp];//previous delta.
+    delta2=delta;
   }
   else if(tmp==mzAxisSize-1) //fin del eje de masas
   {
     delta=mzAxis_p[tmp]-mzAxis_p[tmp-1];//previous delta.
+    delta2=delta;
   }
   else //error
   {
@@ -327,7 +331,8 @@ void GmmPeak::gaussConversion(GAUSSIAN *deconvIn_p, GAUSSIAN *deconvOut_p, float
   sigma=deconvIn_p->sigma;
   tmp=(int)sigma;
   offset=delta*(sigma-(double)tmp);
-  deconvOut_p->sigma=tmp*delta+offset;
+//  deconvOut_p->sigma=tmp*delta+offset;
+  deconvOut_p->sigma=tmp*delta2+offset;
   
   //Adjustment in Y. yFactor is increased by the quotient factor between the sigma in Daltons and in scans.
   if(deconvIn_p->sigma<1e-10) 
@@ -360,15 +365,15 @@ GAUSSIAN *GmmPeak::getDeconv_p(int index)
     {return &m_deconv_p[index];}
 
 //Returns the quality of the Gaussian fit with the composite magnitude info
-float GmmPeak::getQuality()
+double GmmPeak::getQuality()
     {return m_quality;}
 
 //Returns a pointer to the magnitude information handled by the composite peak
-float *GmmPeak::getMagnitude()
+double *GmmPeak::getMagnitude()
     {return m_mag_p;}
 
 //Returns an element of the magnitude information handled by the composite peak
-float GmmPeak::getMagnitude(int index)
+double GmmPeak::getMagnitude(int index)
     {return m_mag_p[index];}
 
 //Returns the number of magnitude elements in the composite peak

@@ -17,7 +17,7 @@ getAverageGaussianSpectrum(
 )
 }
 \arguments{
-\item{params}{"massResolution": mass resolution with which the spectra were acquired (mz/deltaMz).
+\item{params}{"tolerance": desired tolerance for the centroids (ppm)
 "SNR": signal-to-noise ratio
 "noiseMethod": method for estimating noise.}
 
@@ -29,7 +29,7 @@ getAverageGaussianSpectrum(
 
 \item{pxList:}{list of pixels. First pixel=1. By default everyone.}
 
-\item{overSampling:}{interval between points on the mass axis = massResolution/overSampling.}
+\item{overSampling:}{interval between points on the mass axis = tolerance/overSampling.}
 
 \item{nThreads:}{number of threads}
 
@@ -39,7 +39,7 @@ getAverageGaussianSpectrum(
 }
 \value{
 a list: averageMz and averageIntensity
-averageMz: array of masses at intervals of 1/4 of the resolution
+averageMz: array of masses at intervals of 1/4 of the tolerance
 averageIntensity: array of average Gaussians values
 }
 \description{

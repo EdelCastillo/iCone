@@ -36,7 +36,7 @@ using namespace std;
 class Segments
 {
 public:
-  Segments(float massResolution, float mzLow, float mzHigh, float linkedPeaks);
+  Segments(double massResolution, double mzLow, double mzHigh, double linkedPeaks);
   ~Segments();
   
   //Load the file with information about the Gaussian curves associated with each pixel
@@ -57,13 +57,14 @@ public:
   //considering its sigma weighted by linkedPeaks. Very wide Gaussians (sigma > 5*deltaMass) are discarded.
   //Then, its baseband is estimated and considered as noise. Lower intensities are canceled, and the composite peaks are determined. 
   //These peaks determine the width of the mass segments.
-  int getMassRanges(float *linkedPeaks);
+  int getMassRanges(double *linkedPeaks);
   
 
   int   m_totalPixels;
-  float m_massResolution, 
+  double m_massResolution, 
         m_mzHigh, 
         m_mzLow, 
+        m_pxSupport,
         m_linkedPeaks;
   GAUSS_SP      *m_gaussians_p;
   MASS_RANGE    *m_massRange_p;

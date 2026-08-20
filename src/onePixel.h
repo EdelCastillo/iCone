@@ -39,7 +39,7 @@ class OnePixel
 public:
   //Constructor
   //captures input information, allocates memory and initializes.
-  OnePixel(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, int pixel);
+  OnePixel(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, int pixel);
   
   //destructor
   //free reserved memory
@@ -64,7 +64,7 @@ public:
   // intensity: intensity associated with each mass of the raw spectrum
   // SNR: signal-to-noise ratio associated with each mass of the raw spectrum.
   // require of rGetPixelGaussians()
-  List getPixelGaussians(int px, float mzLow, float mzHigh);
+  List getPixelGaussians(int px, double mzLow, double mzHigh);
   
   int       m_NPixels;
   bool      m_exit;
@@ -74,7 +74,7 @@ private:
   bool m_continuous;
   int 
       m_mzLength;
-  float     
+  double     
       m_mzLow,
       m_mzHigh,
       m_SNR,

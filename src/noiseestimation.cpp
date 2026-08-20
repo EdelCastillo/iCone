@@ -44,7 +44,7 @@ NoiseEstimation::NoiseEstimation(int method, int smoothing, int winSize)
     for(int i=-radius; i<=radius; i++) //window for the Gaussian
       radius_p[i+radius]=(double)i;
     double sd=winSize/4; //(width %/% 2) / 2)  standard deviation
-    float add=0;
+    double add=0;
     
     if(smoothing==1) //Gaussian filter
     {
@@ -74,9 +74,9 @@ NoiseEstimation::~NoiseEstimation()
 //spectro_p: Pointer to data.
 //size: Size of the data array.
 //Returns the estimated noise value of a spectrum.
-float NoiseEstimation::getNoise(float *spectro_p, int size)
+double NoiseEstimation::getNoise(double *spectro_p, int size)
 {
-  float estNoise;
+  double estNoise;
   switch(m_method) 
   {
     case 1: estNoise=getNoise_diff (spectro_p, size); break;
@@ -92,9 +92,9 @@ float NoiseEstimation::getNoise(float *spectro_p, int size)
 //size: Size of the data array.
 //Sets the result to the SNR_p pointer.
 //Returns 0
-float NoiseEstimation::getSNR(float *spectro_p, int size, float *SNR_p)
+double NoiseEstimation::getSNR(double *spectro_p, int size, double *SNR_p)
 {
-  float estNoise;
+  double estNoise;
   
   switch(m_method) //function pointer initialization.
   {
@@ -115,13 +115,13 @@ float NoiseEstimation::getSNR(float *spectro_p, int size, float *SNR_p)
 //spectro_p: Pointer to data.
 //size: Size of the data array.
 //Returns the noise estimate using the MAD (median absolute deviation) method.
-float NoiseEstimation::getNoise_mad(float *spectro_p, int size)
+double NoiseEstimation::getNoise_mad(double *spectro_p, int size)
 {
   Common tools;
   double add=0;
-  float *smoothing_p=0, *ad_p=0;
-  smoothing_p=new float[size];
-  ad_p=new float[size];
+  double *smoothing_p=0, *ad_p=0;
+  smoothing_p=new double[size];
+  ad_p=new double[size];
 
   //Gaussian filter smoothing
   gaussSmoothing(spectro_p, size, smoothing_p);
@@ -129,13 +129,13 @@ float NoiseEstimation::getNoise_mad(float *spectro_p, int size)
   for(int i=0; i<size; i++)
     ad_p[i]=abs(spectro_p[i]-smoothing_p[i]); //differences
   
-  float central=tools.medianF(ad_p, size); //median of the differences
+  double central=tools.median(ad_p, size); //median of the differences
 
   for(int i=0; i<size; i++) ad_p[i]=abs(ad_p[i]-central); //abs deviations from the median
   
   //median of the abs deviations from the central value.
   //adjust by a factor for asymptotically normal consistency.
-  float noise=1.4826*tools.medianF(ad_p, size); 
+  double noise=1.4826*tools.median(ad_p, size); 
 
   if(smoothing_p) delete [] smoothing_p;
   if(ad_p) delete [] ad_p;
@@ -146,13 +146,13 @@ float NoiseEstimation::getNoise_mad(float *spectro_p, int size)
 //spectro_p: Pointer to data.
 //size: Size of the data array.
 //Returns the noise estimate using the standard deviation method.
-float NoiseEstimation::getNoise_sd(float *spectro_p, int size)
+double NoiseEstimation::getNoise_sd(double *spectro_p, int size)
 {
   Common tools;
   double add=0;
-  float *smoothing_p=0, *ad_p=0;
-  smoothing_p=new float[size];
-  ad_p=new float[size];
+  double *smoothing_p=0, *ad_p=0;
+  smoothing_p=new double[size];
+  ad_p=new double[size];
 
   //smoothed by Gaussian filter.
   gaussSmoothing(spectro_p, size, smoothing_p);
@@ -161,7 +161,7 @@ float NoiseEstimation::getNoise_sd(float *spectro_p, int size)
     ad_p[i]=abs(spectro_p[i]-smoothing_p[i]); //differences
   
   //estimated noise (standard deviation of the differences).
-  float noise=(float)sqrt((double)tools.varF(ad_p, size));
+  double noise=(double)sqrt((double)tools.var(ad_p, size));
   
   if(smoothing_p) delete [] smoothing_p;
   if(ad_p) delete [] ad_p;
@@ -172,11 +172,11 @@ float NoiseEstimation::getNoise_sd(float *spectro_p, int size)
 //spectro_p: Pointer to data.
 //size: Size of the data array.
 //Returns the noise estimate using the difference method.
-float NoiseEstimation::getNoise_diff(float *spectro_p, int size)
+double NoiseEstimation::getNoise_diff(double *spectro_p, int size)
 {
   Common tools;
-  float *ad_p=0;
-  ad_p=new float[size];
+  double *ad_p=0;
+  ad_p=new double[size];
   if(size<2) return spectro_p[0];
   
   //differences between neighbors
@@ -184,14 +184,14 @@ float NoiseEstimation::getNoise_diff(float *spectro_p, int size)
     ad_p[i]=spectro_p[i+1]-spectro_p[i];
   
   //mean value of the differences
-  float A=tools.meanF(ad_p, size-1);
+  double A=tools.mean(ad_p, size-1);
   
   //absolute differences with the mean value
   for(int i=0; i<size; i++)
     ad_p[i]=abs(spectro_p[i]-A);
   
   //estimated noise (mean of the absolute differences)
-  float noise=tools.meanF(ad_p, size);
+  double noise=tools.mean(ad_p, size);
   
   if(ad_p) delete [] ad_p;
   return noise;
@@ -204,7 +204,7 @@ float NoiseEstimation::getNoise_diff(float *spectro_p, int size)
 //smoothing_p: Pointer to smoothed data.
 //Uses the data generated in the constructor for filtering.
 //Returns 0
-int NoiseEstimation::gaussSmoothing(float *spectro_p, int size, float *smoothing_p)
+int NoiseEstimation::gaussSmoothing(double *spectro_p, int size, double *smoothing_p)
 {
   double add;
   int index;

@@ -13,13 +13,13 @@ getColumnFromFile(file, mass, sample)
 \item{mass}{-> reference to the desired initial column of the peak matrix (Da).}
 
 \item{sample}{-> just download the pixels from this sample.
-if sample < 0, all sample coordinates are returned}
+if sample=0, all sample coordinates are returned}
 }
 \value{
 a list:
 intensity: vector of intesities
 mass: mass associated with the column of peakMatrix.
-massResolution: final mass resolution at centroid.
+tolerance: desired tolerance for the centroids (ppm)
 pixelsSupport: number of pixels in column with non-zero intensity.
 }
 \description{

@@ -13,7 +13,7 @@ getPeakMatrixFromFile(file)
 a list:
 peakMatrix: Matrix of peak (centroids) rows = pixels, columns = intensity of each pixel.
 mass: Vector with the masses associated with each column of peakMatrix.
-massResolution: mass resolution associated with each mass.
+tolerance: desired tolerance for the centroids (ppm)
 pixelsSupport: Vector with the number of pixels in each column with non-zero intensity.
 }
 \description{

@@ -54,13 +54,13 @@ public:
   //pixel: Reference to the desired spectrum.
   //data_p: Pointer to the mass data.
   //Returns the size of the returned data.
-  int getPixelMassF(int pixel, float *data_p);
+  int getPixelMassF(int pixel, double *data_p);
   
   //getPixelIntensityF()
   //pixel: Reference to the desired spectrum.
   //data_p: Pointer to the intensity data.
   //Returns the size of the returned data.
-  int getPixelIntensityF(int pixel, float *data_p);
+  int getPixelIntensityF(int pixel, double *data_p);
   
 
   ImzMLBinRead *m_myReader_p;  

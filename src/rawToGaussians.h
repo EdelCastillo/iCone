@@ -46,7 +46,7 @@ public:
   
   //Constructor
   //captures input information, allocates memory and initializes.
-  RawToGaussians(char *baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params,  Rcpp::NumericVector pxList, float mzLow=0, float mzHigh=0, int nThreads=0);
+  RawToGaussians(char *baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params,  Rcpp::NumericVector pxList, double mzLow=0, double mzHigh=0, int nThreads=0);
   
   // Saves the Gaussian data to the given file
   // Adds it to any existing data
@@ -86,18 +86,18 @@ public:
   //Each mass resolution segment is divided into four parts.
   //pxLow and pxHigh delimit the spectra to be considered.
   //Returns a list with two arrays: averageMz and averageIntensity.
-  List getMeanGaussianSpectrum(float resolution, int overSampling);
+  List getMeanGaussianSpectrum(double resolution, int overSampling);
   
   //Obtains the average values of the intensities on an artificial mass axis.
   //The mass axis is formed from the extreme masses to be considered and the desired resolution.
   //Each mass resolution segment is divided into two parts.
   //pxLow and pxHigh delimit the spectra to be considered.
   //Returns a list with two arrays: averageMz and averageIntensity.
-  List getMeanSpectrum(float resolution, int overSampling);
+  List getMeanSpectrum(double resolution, int overSampling);
   
   GAUSS_SP *getGaussiansPointer();
   int getPixelsNumber();
-  NumericMatrix getPixelGaussians(int px, float mzLow, float mzHigh);
+  NumericMatrix getPixelGaussians(int px, double mzLow, double mzHigh);
   
 private:  
   //getGaussians()
@@ -123,7 +123,7 @@ public:
   m_maxPxGaussians,
   m_massRangeSize,
   m_NPixels;
-  float   m_linkedPeaks; //Two peaks are considered linked if they are closer than the given standard deviation.
+  double   m_linkedPeaks; //Two peaks are considered linked if they are closer than the given standard deviation.
   double     
     m_massResolution;
   bool     m_hit;
@@ -139,7 +139,7 @@ private:
     *m_pxList,
     m_pxMax,
     m_pxMin;
-    float     
+    double     
     m_mzLow,
     m_mzHigh,
     m_SNR;

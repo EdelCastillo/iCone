@@ -28,7 +28,7 @@
 #define DECONV_MAX_GAUSSIAN 100
 
 typedef struct{                 //deconvolution overview for a compound magnitude peak
-    float
+    double
                 mean,           //mean of this Gaussian
                 sigma,          //standard deviation of this Gaussian
                 weight,         //relative weight of this Gaussian
@@ -68,7 +68,7 @@ typedef struct  //limits on variations
 
 typedef struct
 {
-    float   *x,                         //X coordinates
+    double   *x,                         //X coordinates
             *y;                         //Y coordinates
     int     size,                       //array size
             maxIter,                    //maximum number of iterations

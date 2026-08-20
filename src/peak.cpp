@@ -25,7 +25,7 @@
 //magnitude_p[] -> array of input values to extract peak (positive reals)
 //magnitudeSize -> size of the array of input values
 //noise -> minimum value so that the value of magnitude_p[] can be considered
-Peak::Peak(SPECTRO *spectro_p, float SNR)
+Peak::Peak(SPECTRO *spectro_p, double SNR)
     {
     m_magnitude_p=spectro_p->int_p;
     m_magnitudeSize=spectro_p->size;
@@ -95,9 +95,9 @@ int Peak::get(int mzIndexIni, int mzIndexEnd)
     bool hitCresta=false, hitValle=false;
     State state;
     int ionCresta=0, ionValle=0, ionIndex=0, TmaxIon=0, TminIon=0;
-    float TiniVal=0, TmaxVal=0, TminVal=0, A, B, resolution;
+    double TiniVal=0, TmaxVal=0, TminVal=0, A, B, resolution;
 
-    float delta;
+    double delta;
     int indexIni=0;
 //    Common tools;
 
@@ -237,7 +237,7 @@ int Peak::get(int mzIndexIni, int mzIndexEnd)
             {m_mzIndex_p[i].confidence=true; continue;}
 
         m_mzIndex_p[i].confidence=false;
-        float minValue=1e32, maxValue=-1;
+        double minValue=1e32, maxValue=-1;
         int maxIndex, minIndex;
         for(int j=m_mzIndex_p[i].low+1; j<m_mzIndex_p[i].high; j++) //for the values within the ion.
             {

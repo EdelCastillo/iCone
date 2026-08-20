@@ -30,7 +30,7 @@ class IntensityPeak
 {
     public:
         //Constructor: initialization
-        IntensityPeak(float SNR);
+        IntensityPeak(double SNR);
 
         //destructor: frees reserved memory.
         ~IntensityPeak();
@@ -47,7 +47,7 @@ class IntensityPeak
         //  dataOut_p -> son los datos convertidos
         //  newUnit_p -> es un array con las unidades de destino
         //  size      -> es el tamaño de todos los arrays
-        void unitConversion(float *dataIn_p, float *dataOut_p, float *newUnit_p, int size);
+        void unitConversion(double *dataIn_p, double *dataOut_p, double *newUnit_p, int size);
 
         //Returns the information of a simple magnitude peak.
         ION_INDEX getSinglePeak(int mPeak);
@@ -76,7 +76,7 @@ class IntensityPeak
         int             m_nUnitedPeak; //number of entries in m_unitedPeak_p.
         PEAK_LIST       m_peakList;
         int             m_nIntPeak;
-        float           m_SNR;
+        double           m_SNR;
 };
 
 #endif

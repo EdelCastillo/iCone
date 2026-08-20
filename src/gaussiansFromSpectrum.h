@@ -39,7 +39,7 @@ class GaussiansFromSpectrum
 public:
   //Constructor
   //captures input information, allocates memory and initializes.
-  GaussiansFromSpectrum(Rcpp::NumericVector intensitiy, Rcpp::NumericVector mz, Rcpp::List params, float mzLow, float mzHigh);
+  GaussiansFromSpectrum(Rcpp::NumericVector intensitiy, Rcpp::NumericVector mz, Rcpp::List params, double mzLow, double mzHigh);
   
   //destructor
   //free reserved memory
@@ -67,7 +67,7 @@ public:
   // noise: noise estimation
   // Returns a list with information about a spectrum
   // requires of rawToGaussians() first
-  List getGaussiansList(float mzLow, float mzHigh);
+  List getGaussiansList(double mzLow, double mzHigh);
   
   bool      m_exit;
     
@@ -76,7 +76,7 @@ private:
   bool m_continuous;
   int 
       m_mzLength;
-  float     
+  double     
       m_mzLow,
       m_mzHigh,
       m_SNR,

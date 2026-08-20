@@ -10,7 +10,7 @@ getAverageSpectrum(
   initMass = 0,
   finalMass = 0,
   pxList = c(0),
-  massResolution = 30000,
+  tolerance = 33,
   overSampling = 4,
   imzMLChecksum = F,
   fixBrokenUUID = F
@@ -25,9 +25,9 @@ getAverageSpectrum(
 
 \item{pxList:}{list of pixels. First pixel=1. By default everyone.}
 
-\item{massResolution:}{mass resolution with which the spectra were acquired (mz/deltaMz).}
+\item{tolerance:}{desired tolerance for the centroids (ppm)}
 
-\item{overSampling:}{interval between points on the mass axis = massResolution/overSampling.}
+\item{overSampling:}{interval between points on the mass axis = tolerance/overSampling.}
 
 \item{imzMLChecksum:}{if the binary file checksum must be verified, it can be disabled for convenice with really big files.}
 
@@ -35,7 +35,7 @@ getAverageSpectrum(
 }
 \value{
 a list: averageMz and averageIntensity
-averageMz: array of masses at intervals of the resolution/overSampling
+averageMz: array of masses at intervals of the tolerance/overSampling
 averageIntensity: array of average Gaussians values
 }
 \description{

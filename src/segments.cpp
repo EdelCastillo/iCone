@@ -21,8 +21,9 @@
 //constructor
 //class: extracts mass segments where overlapping Gaussians exist. Over all pixels.
 //The source information is located in a temporary file.
-Segments::Segments(float massResolution, float mzLow, float mzHigh, float linkedPeaks)
+Segments::Segments(double massResolution, double mzLow, double mzHigh, double linkedPeaks)
 {
+  
   m_totalPixels=0; //It is set in the loadGaussians() function.
   m_massResolution=massResolution;
   m_mzHigh=mzHigh;
@@ -58,7 +59,7 @@ Segments::~Segments()
 //identified. The noise level is determined by the highest of three values: iterative averaging with saturation,
 //the highest noise level, and the percentage of total pixels. If any segment exceeds 3 Da, the noise level is 
 //increased until it is reached.
-int Segments::getMassRanges(float* linkedPeak_p)
+int Segments::getMassRanges(double* linkedPeak_p)
 {
   printf("\tphase 2:\t#isolate mass segments: ");
   double highMass, lowMass, highMassOld, lowMassOld;
@@ -66,13 +67,13 @@ int Segments::getMassRanges(float* linkedPeak_p)
   double deltaMass=m_mzLow/(4*m_massResolution); //delta=1/4 of the minimum mass increment of the spectrometer
   int massAxisSize=1+(m_mzHigh-m_mzLow)/deltaMass;
   
-  float *massAxis=0;
-  massAxis= new float[massAxisSize];
-  float linkedPeaks=m_linkedPeaks;
+  double *massAxis=0;
+  massAxis= new double[massAxisSize];
+  double linkedPeaks=m_linkedPeaks;
   int nUPeak=0, px;
   SPECTRO  spectro;
   spectro.SNR_p=0;
-  spectro.SNR_p=new float[massAxisSize];
+  spectro.SNR_p=new double[massAxisSize];
   bool hit;
   int iSegment=0;
   
@@ -106,7 +107,10 @@ int Segments::getMassRanges(float* linkedPeak_p)
         lowMass=highMassOld;
       iLow =(lowMass -m_mzLow)/deltaMass;
       iHigh=(highMass-m_mzLow)/deltaMass;
-      for(int j=iLow; j<=iHigh; j++) {if(j<massAxisSize) massAxis[j]+=1.0;}
+      
+      for(int j=iLow; j<=iHigh; j++) 
+        if(j<massAxisSize) massAxis[j]+=1.0;
+      
       if(highMass>highMassOld)
         highMassOld=highMass;
     }
@@ -114,13 +118,13 @@ int Segments::getMassRanges(float* linkedPeak_p)
 
   //noise estimation
   NoiseEstimation noiseEst(3, 1, 9); //MAD, smoothig & windows=9
-  float noise=noiseEst.getNoise(massAxis, massAxisSize);
+  double noise=noiseEst.getNoise(massAxis, massAxisSize);
   
   //The baseband is estimated (recursive averaging).
   //the iteration ends when the slope reaches a value less than 1% of the initial slope.
   //max iterations=10
-  float acu=0, vMean;
-  float value[2], minDiff=0;
+  double acu=0, vMean;
+  double value[2], minDiff=0;
 
   for(int j=0; j<massAxisSize; j++) acu+=massAxis[j]; vMean=acu/massAxisSize;
 
@@ -140,7 +144,7 @@ int Segments::getMassRanges(float* linkedPeak_p)
  
   //decision of the value assigned to noise.
   vMean=noise>vMean?noise:vMean; // the greatest.
-  float pxSupport=m_totalPixels*0.0001; //minimum spectra that support.
+  double pxSupport=m_totalPixels*0.0001; //minimum spectra that support.
   if(pxSupport<0.999) pxSupport=0.999; //at least one support (avoid unity).
   vMean=vMean>pxSupport?vMean: pxSupport; //the greatest.
   if(vMean<=0 && noise<1e-6) vMean=value[0]/100.0; //minimal noise
@@ -170,9 +174,9 @@ int Segments::getMassRanges(float* linkedPeak_p)
   
   //for each set of joined peak.
   int   pLow,  pHigh, iLowMass, iHighMass;
-  float lowMz, highMz;
+  double lowMz, highMz;
   hit=true;
-  float localSNR=1;
+  double localSNR=1;
   iSegment=0;
   for(int i=0; i<nUPeak; i++)
   {
@@ -191,8 +195,21 @@ int Segments::getMassRanges(float* linkedPeak_p)
         printf("Warning: The limit of planned segments (%d) has been reached.\nIt is suggested to increase the value of the linkedPeaks argument.", maxSegments);
         break;   //no more space
       }
-      m_massRange_p[iSegment].low =lowMz;//package ends
-      m_massRange_p[iSegment++].high=highMz;
+      
+      unsigned int maxG=0;
+      for(int i=iLowMass; i<iHighMass; i++)
+      {
+      //  if(massAxis[i]>maxG)maxG=massAxis[i];
+          acu+=massAxis[i];
+      }
+      //acu*=4.0/(iHighMass-iLowMass);
+      //if(maxG*4>=m_pxSupport)
+      {
+        m_massRange_p[iSegment].low =lowMz;//package ends
+        m_massRange_p[iSegment].high=highMz;
+        m_massRange_p[iSegment++].nGaussians=acu;
+      }
+      //else printf("...\n");
     }
     else
     {
@@ -236,6 +253,7 @@ int Segments::getMassRanges(float* linkedPeak_p)
             printf("Warning: The limit of planned segments (%d) has been reached.\nIt is suggested to increase the value of the linkedPeaks argument.", maxSegments);
             break;   //no more space
           }
+          int acu=0;
           for(int j=0; j<nUPeak2; j++) 
             {
               pLow =intPeak.getCompoundPeak(j).peakLow; //index to lower peak of the composite peak.
@@ -244,8 +262,19 @@ int Segments::getMassRanges(float* linkedPeak_p)
               iHighMass2=intPeak.getSinglePeak(pHigh).high+iLowMass;
               lowMz =m_mzLow+iLowMass2 *deltaMass; //lower  mass.
               highMz=m_mzLow+iHighMass2*deltaMass; //higher mass.
-              m_massRange_p[iSegment].low =lowMz;//package ends
-              m_massRange_p[iSegment++].high=highMz;
+              acu=0;
+              unsigned int maxG=0;
+              for(int i=iLowMass2; i<iHighMass2; i++)
+              {
+                //if(massAxis[i]>maxG)maxG=massAxis[i];
+                acu+=massAxis[i];
+              }
+              //if(maxG*4>=m_pxSupport)
+              {
+                m_massRange_p[iSegment].low =lowMz;//package ends
+                m_massRange_p[iSegment].high=highMz;
+                m_massRange_p[iSegment++].nGaussians=acu;
+              }
             }
           break;
         }
@@ -273,7 +302,7 @@ int Segments::loadGaussians(char *fileName)
   if(!fp.is_open())
   {
     char txt[200];
-    sprintf(txt, "Error: %s file could not be opened..\n", fileName);
+    sprintf(txt, "Error: %s file could not be opened.\n", fileName);
     throw std::runtime_error(txt);
   }
   int nSamplePixels, nPixels, nPxGauss;
@@ -303,7 +332,8 @@ int Segments::loadGaussians(char *fileName)
   
   m_gaussians_p=new GAUSS_SP[pxTotal]; //array of structs
   for(int i=0; i<pxTotal; i++) {m_gaussians_p[i].gauss_p=0; m_gaussians_p[i].size=0;}  
-
+//  int totalGaussians=0;
+  
   while(!fp.eof())
   {
     fp.read((char*)&nSamplePixels, sizeof(int)); //#pixels of sample
@@ -314,6 +344,7 @@ int Segments::loadGaussians(char *fileName)
       if(fp.eof()) break;
       m_gaussians_p[pxIndex].size=nPxGauss;
       if(nPxGauss==0) {pxIndex++; continue;}
+//  totalGaussians+=nPxGauss;
       
       m_gaussians_p[pxIndex].gauss_p=new GAUSS_PARAMS[nPxGauss]; //memory
       fp.read((char*)m_gaussians_p[pxIndex].gauss_p, nPxGauss*gaussSize ); //load
@@ -331,7 +362,7 @@ int Segments::loadGaussians(char *fileName)
     }
   }
     fp.close();
-//  printf("%d %d\n", pxTotal, pxIndex);
+//  printf("...%d\n", totalGaussians);
   m_totalPixels=pxIndex;
   return pxIndex;
 }

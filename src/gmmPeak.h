@@ -33,7 +33,7 @@ public:
     //Constructor:
     //Argument:
     //minMeanPeakMagnitude -> minimum averaged magnitude for a peak to be deconvolved
-    GmmPeak(float minMeanPeakMagnitude);
+    GmmPeak(double minMeanPeakMagnitude);
 
     //Destructor: frees reserved memory.
     ~GmmPeak();
@@ -70,7 +70,7 @@ public:
     //                Cada nuevo valor es un nuevo scan. Asociación entre ejes de mz y magnitudes
     //  mzAxisSize -> tamaño del array de mz. Debe coincidir con el tamaño de las magnitudes a analizar
     //NOTA: si los scans son muy irregulares, puede no hacer una buena conversión!!!!
-    void gaussConversion(GAUSSIAN *deconvIn_p, GAUSSIAN *deconvOut_p, float *mzAxis_p, int mzAxisSize);
+    void gaussConversion(GAUSSIAN *deconvIn_p, GAUSSIAN *deconvOut_p, double *mzAxis_p, int mzAxisSize);
 
     //Returns information about the sirem peak that are candidates for generating Gaussians
     unsigned long getEtpHits();
@@ -85,13 +85,13 @@ public:
     GAUSSIAN *getDeconv_p(int index);
 
     //Returns the quality of the Gaussian fit with the composite magnitude info
-    float getQuality();
+    double getQuality();
 
     //Returns a pointer to the magnitude information handled by the composite peak
-    float *getMagnitude();
+    double *getMagnitude();
 
     //Returns an element of the magnitude information handled by the composite peak
-    float getMagnitude(int index);
+    double getMagnitude(int index);
 
     //Returns the number of magnitude elements in the composite peak
     int getMagnitudeNumber();
@@ -102,7 +102,7 @@ private:
     //Return -1 if the average magnitude within the peak does not reach a minimum (m_minMeanPeakMagnitude)
     int iniGMM();
 
-    float           *m_mag_p,       //magnitude array
+    double           *m_mag_p,       //magnitude array
                     m_minPeakMagnitude; //peak of lower magnitude are discarded
     int             m_nMag;         //magnitude array size
     GMM_STRUCT      m_sGmm;         //structure for deconvolution of a peak
@@ -111,7 +111,7 @@ private:
                     m_meanDeconv[32]; //array de gausianas con valores promediados
     int             m_nDeconv;      //deconvolution number of gaussians
     unsigned long   m_etpHits;      //sirem peak array
-    float           m_quality;      //quality of the Gaussian fit
+    double           m_quality;      //quality of the Gaussian fit
     ION_INDEX       *m_intPeak_p;
     int             m_nIntPeak;
 };

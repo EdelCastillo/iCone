@@ -16,7 +16,7 @@ getPeakMatrix(
 )
 }
 \arguments{
-\item{params}{"massResolution": desired mass resolution.
+\item{params}{"tolerance": desired tolerance for the centroids (ppm)
 "SNR": signal-to-noise ratio (by defect=1)
 "noiseMethod": method for estimating noise (by defect="estnoise_mad").
 "minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered (by defect=1).
@@ -44,7 +44,7 @@ The attached binary file, with the 'ibd' extension, must be in the same director
 a list:
 peakMatrix: Matrix of peak (centroids) rows = pixels, columns = intensity of each pixel.
 mass: Vector with the masses associated with each column of peakMatrix.
-massResolution: mass resolution associated with each mass.
+tolerance: desired tolerance for the centroids (ppm)
 pixelsSupport: Vector with the number of pixels in each column with non-zero intensity.
 coordinates: Matrix with pixel coordinates (X/Y).
 pixelsSample: Vector with the number of pixels in each of the samples. In the peakMatrix and coordinates they appear in the same order.

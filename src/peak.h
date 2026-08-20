@@ -44,7 +44,7 @@ public:
     //magnitudeSize -> size of the array of input values
     //peakGap -> minimum increment between consecutive scans so that a peak can be considered as such
     //noise -> minimum value so that the value of magnitude_p[] can be considered
-    Peak(SPECTRO *spectro_p, float SNR);
+    Peak(SPECTRO *spectro_p, double SNR);
     
     //destructor
     //reserved memory is released.
@@ -96,7 +96,7 @@ public:
     //Saturates if 'value' is out of range or if the target range is null
     double rangeConversion(double value, double x1, double x2, double y1, double y2);
 
-    float   *m_magnitude_p, //array of input values to extract peak.
+    double   *m_magnitude_p, //array of input values to extract peak.
             m_noiseLevel,        //minimum value so that the value of magnitude_p[] can be considered.
             m_SNR;
     int     m_magnitudeSize;//size of the array of input values.

@@ -21,7 +21,7 @@
 #include "peakInfo.h"
 
 //Constructor: initialization
-IntensityPeak::IntensityPeak(float SNR)
+IntensityPeak::IntensityPeak(double SNR)
 {
     m_SNR=SNR;
     m_peakList.intPeak_p=0;
@@ -147,9 +147,9 @@ int IntensityPeak::unitedPeak(PEAK_LIST *peakList_p, SPECTRO *spectro_p)
 //  dataOut_p -> son los datos convertidos
 //  newUnit_p -> es un array con las unidades de destino
 //  size      -> es el tamaño de todos los arrays
-void IntensityPeak::unitConversion(float *dataIn_p, float *dataOut_p, float *newUnit_p, int size)
+void IntensityPeak::unitConversion(double *dataIn_p, double *dataOut_p, double *newUnit_p, int size)
 {
-  float data, delta, offset;
+  double data, delta, offset;
   int tmp;
 
   //ajuste de mean
@@ -163,7 +163,7 @@ void IntensityPeak::unitConversion(float *dataIn_p, float *dataOut_p, float *new
     else
       delta=newUnit_p[tmp]-newUnit_p[tmp-1];//delta anterior
 
-    offset=delta*(data-(float)tmp); //desplazamiento respecto al origen del pico compuesto
+    offset=delta*(data-(double)tmp); //desplazamiento respecto al origen del pico compuesto
     dataOut_p[i]=newUnit_p[tmp]+offset; //valor convertido
 
   }

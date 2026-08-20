@@ -19,7 +19,8 @@
 #include "peakMatrix.h"
 
 int  gProcSegments, gVez; //observers.
-std::mutex gMutex;
+std::mutex gMutex, gMutex2;
+FILE *gfp;
 
 /// R METHODS ////////////////////////////////////////////////////////////////////////
 
@@ -69,7 +70,7 @@ List rGetMetaDataFromFile(const char* file)
 //' as the cumulative number of pixels in each sample and two columns.
 //' @param file   -> file name with pixels coordinates (tmpPixelsCoordinates.bin)
 //' @param sample -> just download the pixels from this sample.
-//'                 if sample < 0, all sample coordinates are returned
+//'                 if sample < 1, all sample coordinates are returned
 //' @return a matrix with the coordinates (X/Y) of pixels.
 //' 
 // [[Rcpp::export]]
@@ -186,17 +187,17 @@ NumericVector rGetMassVectorFromFile(const char* file)
    fp.read((char*)&nIons,    sizeof(int)); //ions number
    fp.read((char*)pxSample,  nSamples*sizeof(int)); //px in each sample
    
-   colSize=((totalPx+2)*sizeof(float)+sizeof(int));
+   colSize=((totalPx+2)*sizeof(double)+sizeof(int));
    offset=3*sizeof(int)+nSamples*sizeof(int);
 
    //get matrix column from mass parameters
    NumericVector massVect(nIons);
-   float tmpMass=0;
+   double tmpMass=0;
    for(int i=0; i<nIons; i++)
      {
        ionPos=offset+(i*colSize);
        fp.seekg(ionPos, std::ios_base::beg);  
-       fp.read((char*)&tmpMass, sizeof(float));
+       fp.read((char*)&tmpMass, sizeof(double));
        massVect(i)=tmpMass;
      }
    fp.close();
@@ -216,6 +217,8 @@ NumericVector rGetMassVectorFromFile(const char* file)
    std::fstream fp;
    std::streampos pos, colSize;
    int nSamples, totalPx, nIons;
+   if(column<1)
+   {printf("warning: 'column' must be an integer value greater than zero.\n"); return 0;}
    
    fp.open(file, std::fstream::in | std::ios::binary);
    if(!fp.is_open())
@@ -228,16 +231,22 @@ NumericVector rGetMassVectorFromFile(const char* file)
    fp.read((char*)&totalPx,  sizeof(int)); //total pixels in all samples
    fp.read((char*)&nIons,    sizeof(int)); //ions number
    
-   colSize=((totalPx+2)*sizeof(float)+sizeof(int));
+   colSize=((totalPx+2)*sizeof(double)+sizeof(int));
    pos=3*sizeof(int)+nSamples*sizeof(int)+(column-1)*colSize;
    
    NumericVector ret(totalPx+3);
-   float intensity;
+   double intensity;
    int pxSupport;
    fp.seekg(pos, std::ios_base::beg);
-   for(int i=0; i<totalPx+3; i++)
+   fp.read((char*)&intensity, sizeof(double)); //mass
+   ret[0]=intensity;
+   fp.read((char*)&intensity, sizeof(double)); //massRes
+   ret[1]=intensity;
+   fp.read((char*)&pxSupport, sizeof(int)); //nPx
+   ret[2]=pxSupport;
+   for(int i=3; i<totalPx+3; i++)
    {
-     fp.read((char*)&intensity, sizeof(float));
+     fp.read((char*)&intensity, sizeof(double));
      ret[i]=intensity;
    }
    fp.close();
@@ -258,7 +267,7 @@ NumericVector rGetMassVectorFromFile(const char* file)
  //' pixelsSupport: number of pixels in column with non-zero intensity. 
 
  // [[Rcpp::export]]
- List rGetColumnFromFile(const char* file, float mass, int sample)
+ List rGetColumnFromFile(const char* file, double mass, int sample)
  {
    std::fstream fp;
    std::streampos ionPos, colSize, offset;
@@ -286,21 +295,21 @@ NumericVector rGetMassVectorFromFile(const char* file)
      return 0;
    }
    
-   colSize=(totalPx+3)*sizeof(float); //size of column
+   colSize=(totalPx+2)*sizeof(double)+sizeof(int); //size of column
    offset=3*sizeof(int)+nSamples*sizeof(int); //file header
    
    //get the mass vector.
-   float* tmpMassVect=0;
-   tmpMassVect=new float[nIons];
+   double* tmpMassVect=0;
+   tmpMassVect=new double[nIons];
    int massVectSize;
 
    for(int i=0; i<nIons; i++)
      {
        ionPos=offset+(i*colSize);
        fp.seekg(ionPos, std::ios_base::beg);  
-       fp.read((char*)(tmpMassVect+i), sizeof(float));
+       fp.read((char*)(tmpMassVect+i), sizeof(double));
      }
-   
+
    if(mass<tmpMassVect[0] || mass>tmpMassVect[nIons-1])
      printf("warning: mass is out of range (%.4f/%.4f)\n", tmpMassVect[0], tmpMassVect[nIons-1]);
    
@@ -326,20 +335,21 @@ NumericVector rGetMassVectorFromFile(const char* file)
 
    //object for R link
    NumericVector intVect(nPixels);
-   float matrixMass, massRes, intensity, pxSupport;
+   double matrixMass, massRes, intensity;
+   int pxSupport;
    
    ionPos=offset+(massIndex*colSize);
    fp.seekg(ionPos, std::ios_base::beg); //file position
    
    //read column data
-   fp.read((char*)&matrixMass, sizeof(float));
-   fp.read((char*)&massRes,  sizeof(float));
-   fp.read((char*)&pxSupport,  sizeof(float));
-   ionPos=offset+(massIndex*colSize)+initPx*(std::streampos)sizeof(float);
+   fp.read((char*)&matrixMass, sizeof(double));
+   fp.read((char*)&massRes,  sizeof(double));
+   fp.read((char*)&pxSupport,  sizeof(int));
+   ionPos=offset+(massIndex*colSize)+initPx*(std::streampos)sizeof(double);
 
    for(int i=0; i<nPixels; i++)
    {
-     fp.read((char*)&intensity, sizeof(float));
+     fp.read((char*)&intensity, sizeof(double));
      intVect[i]=intensity;
    }
    fp.close();
@@ -373,17 +383,21 @@ NumericVector rGetMassVectorFromFile(const char* file)
  //'  pixelsSample: Vector with number of pixels in each sample analyzed.
  //'     
  // [[Rcpp::export]]
-List peakMatrixR(Rcpp::String baseDir, Rcpp::List params, float mzLow, float mzHigh, int nThreads)
+List peakMatrixR(Rcpp::String baseDir, Rcpp::List params, double mzLow, double mzHigh, int nPixels, int nThreads)
 {
   NumericVector nv;
 //  double *Z=new double[1000000000];
-  nv=params["massResolution"];
-  float massResolution=nv[0];
-  
+  nv=params["tolerance"];
+  double massResolution=1e6/nv[0];
+
   //Two peaks are considered linked if they are closer than the given standard deviation.
   nv=params["linkedPeaks"]; 
-  float linkedPeaks=nv[0];
-
+  double linkedPeaks=nv[0];
+  
+  //minimum percentage of pixels that must support a centroid.
+  nv=params["minPixelsSupport"]; 
+  double pxSupport=nv[0]*nPixels/100.0;
+  
   //class for segmentation of the mass axis.
   Segments segments(massResolution, mzLow, mzHigh, linkedPeaks);
   
@@ -393,26 +407,26 @@ List peakMatrixR(Rcpp::String baseDir, Rcpp::List params, float mzLow, float mzH
   strcat(fileName, (char*)"tmpGaussians.bin");
 
   //Loading the Gaussians generated by the RawToGaussians class from a temporary file.
-  int totalPixels=segments.loadGaussians(fileName);
+  int totalPixels=0;
+  totalPixels=segments.loadGaussians(fileName);
 
-  nv=params["minPixelsSupport"];
-  float pxSupport=nv[0]*totalPixels/100.0;
-  
-  float linked=linkedPeaks;
+  double linked=linkedPeaks;
   //Segments from mass axis
-  int size=segments.getMassRanges(&linked);
+  int size=0;
+  size=segments.getMassRanges(&linked);
 
   MASS_RANGE massRange; //mass range to evaluate
   massRange.low=mzLow;
   massRange.high=mzHigh;
-  
   //class for peak matrix
+ 
   PeakMatrix peakMatrix(totalPixels, massResolution, mzLow, mzHigh, pxSupport, segments.m_massRange_p, segments.m_gaussians_p, nThreads);
-  peakMatrix.m_massRangeSize=size;
   
+  peakMatrix.m_massRangeSize=size;
   strcpy(fileName, (char*)baseDir.get_cstring());
   //build the peak matrix
-  List ret=peakMatrix.massRangeToCentroids(fileName, massRange);
+  
+  List ret=peakMatrix.massRangeToCentroids(fileName,  massRange);
   
   delete [] fileName;
   return ret;
@@ -427,7 +441,7 @@ List peakMatrixR(Rcpp::String baseDir, Rcpp::List params, float mzLow, float mzH
 //     pxSupport: minimum percentage of pixels that must support an ion for it to be considered.
 //   massRange_p: array of structures with information on isolated mass segments.
 //   gaussians_p: array of structures with information about Gaussians.
-PeakMatrix::PeakMatrix(int totalPixels, float massResolution, float mzLow, float mzHigh, float pxSupport, MASS_RANGE *massRange_p, GAUSS_SP *gaussians_p, int nThreads)
+PeakMatrix::PeakMatrix(int totalPixels, double massResolution, double mzLow, double mzHigh, double pxSupport, MASS_RANGE *massRange_p, GAUSS_SP *gaussians_p, int nThreads)
 {
   m_totalPixels=totalPixels;
   m_massResolution=massResolution;
@@ -435,24 +449,27 @@ PeakMatrix::PeakMatrix(int totalPixels, float massResolution, float mzLow, float
   m_mzLow=mzLow;
   m_pxSupport=pxSupport;
   m_massRange_p=massRange_p;
-  
   m_nThreads =thread::hardware_concurrency()-1; //a core is released
   if(nThreads<m_nThreads && nThreads>0)
     m_nThreads =nThreads;
   if(m_nThreads<=0) m_nThreads=1;
   if(m_nThreads>MAX_THREADS) m_nThreads=MAX_THREADS;
   if(m_nThreads> m_totalPixels) m_nThreads=m_totalPixels;
-  
   m_gaussians_p=gaussians_p;
   for(int i=0; i<MAX_THREADS; i++)
     m_thread_p[i]=0;
   m_pixelsCoordinates_p=0;
+  m_ionEntry_p=0; 
+  
+  gfp=0;
+  gfp=fopen("report.txt", "w");
+  fclose(gfp);
 }
 
 //Destructor
 PeakMatrix::~PeakMatrix()
 {
-  return;
+  //printf("PeakMatrix destructor init\n");
   //the memory reserved for the ion chain is released.
   if(m_ionEntry_p)
   {
@@ -467,7 +484,8 @@ PeakMatrix::~PeakMatrix()
     delete [] m_ionEntry_p; m_ionEntry_p=0;
   }
   if(m_pixelsCoordinates_p) delete[] m_pixelsCoordinates_p;
-  
+  //printf("PeakMatrix destructor finish\n");
+// if(gfp) fclose(gfp);
 }
 
 //massRangeToCentroids()
@@ -482,14 +500,6 @@ PeakMatrix::~PeakMatrix()
 //pixelsSupport: Number of pixels with intensity > minPixelsSupport.
 List PeakMatrix::massRangeToCentroids(char *baseDir, MASS_RANGE massRangeIn)
 {
-  Common common;
-  int indexLow =common.nearestIndexMassRangeLow (massRangeIn.low,  m_massRange_p, m_massRangeSize);
-  int indexHigh=common.nearestIndexMassRangeHigh(massRangeIn.high, m_massRange_p, m_massRangeSize);
-  int Q =(indexHigh-indexLow+1)/m_nThreads; //partes iguales para cada thread
-  int R =(indexHigh-indexLow+1)%m_nThreads; //partes iguales para cada thread
-  int px;
-  
-  if(indexLow==-1 || indexHigh==-1) {return 0;}
   //Memory for necessary structures.
   //Holds mass range information.
   m_massSegment.massRange_p=  new MASS_RANGE[m_nThreads];
@@ -506,13 +516,45 @@ List PeakMatrix::massRangeToCentroids(char *baseDir, MASS_RANGE massRangeIn)
     m_ionEntry_p[i]->group=0;
   }
   
-  m_enable=true; //allows the thread loop to operate.
+  //asignación con el mismo número de segmentos a todos los threads
+  int acuThread=m_massRangeSize/m_nThreads;
+  
+  //Mass ranges that each thread must process (linear distribution).
+  int indexInit=0;
+  int acuSeg;
+
+  for(int thr=0; thr<m_nThreads; thr++)
+  {
+    acuSeg=0;
+    m_massSegment.massRange_p[thr].low=indexInit;
+    for(int j=indexInit; j<m_massRangeSize; j++)
+    {
+      acuSeg++;
+      if(acuSeg>=acuThread)
+        {
+        m_massSegment.massRange_p[thr].high=j;
+        indexInit=j+1; 
+        break;
+        }
+    }
+  }
+  m_massSegment.massRange_p[m_nThreads-1].high=m_massRangeSize-1;
+
+  //asignación  lineal (eje de masas en partes iguales) 
+/*
+ Common common;
+ int indexLow =common.nearestIndexMassRangeLow (massRangeIn.low,  m_massRange_p, m_massRangeSize);
+ int indexHigh=common.nearestIndexMassRangeHigh(massRangeIn.high, m_massRange_p, m_massRangeSize);
+ int Q =(indexHigh-indexLow+1)/m_nThreads; //partes iguales para cada thread
+ int R =(indexHigh-indexLow+1)%m_nThreads; //partes iguales para cada thread
+ if(indexLow==-1 || indexHigh==-1) {return 0;}
+ 
   bool hit=false;
   int high=-1;
   //Mass ranges that each thread must process (linear distribution).
   for(int thr=0; thr<m_nThreads; thr++)
   {
-    m_massSegment.massRange_p[thr].low =high+1; //Note: these are integer values over floats.
+    m_massSegment.massRange_p[thr].low =high+1; //Note: these are integer values over doubles.
     if(thr<R)
     {
       m_massSegment.massRange_p[thr].high=high+Q+1;
@@ -524,12 +566,12 @@ List PeakMatrix::massRangeToCentroids(char *baseDir, MASS_RANGE massRangeIn)
     high=m_massSegment.massRange_p[thr].high;
     if(high>=indexHigh) break;
   }
-
+*/
   //Thread
   //1) Mass ranges containing joined Gaussians are established.
   //2) Segmentation: Centroids and nearest pixels are established.
   //Threads are activated.
-  m_enable=true;
+  m_enable=true; //allows the thread loop to operate.
   for(int i=0; i<m_nThreads; i++)
     m_thread_p[i]=new std::thread(&PeakMatrix::mtSegmentation, this, i);
   
@@ -542,7 +584,6 @@ List PeakMatrix::massRangeToCentroids(char *baseDir, MASS_RANGE massRangeIn)
     delete m_thread_p[i]; m_thread_p[i]=0;
   }
   printf("100\n");
-  
 
   //adequacy of results for R.
   int totalIons=0;
@@ -563,7 +604,7 @@ List PeakMatrix::massRangeToCentroids(char *baseDir, MASS_RANGE massRangeIn)
   strcpy(fileName, baseDir);
   strcat(fileName, (char*)"tmpPeakMatrix.bin");
   fp.open(fileName, std::fstream::out | std::ios::binary | std::ios::trunc);
-    if(!fp.is_open())
+  if(!fp.is_open())
     {
       char txt[300];
       sprintf(txt, "Error: The internal file %s could not be created.\n The peak matrix cannot be saved.\n", fileName);
@@ -580,8 +621,8 @@ List PeakMatrix::massRangeToCentroids(char *baseDir, MASS_RANGE massRangeIn)
     }
     
     ION_ENTRY *localIonEntry_p; //input
-    float lastMass=0;
-    float tmp;
+    double lastMass=0;
+    int tmp;
     for(int thr=0; thr<m_nThreads; thr++)
     {
       localIonEntry_p=m_ionEntry_p[thr];  //entry to the info.
@@ -592,12 +633,12 @@ List PeakMatrix::massRangeToCentroids(char *baseDir, MASS_RANGE massRangeIn)
         //This is a consequence of dealing with joined Gaussians.     
         if(localIonEntry_p->mass>lastMass)                 //the masses are ordered.
         {
-          fp.write((char*)&localIonEntry_p->mass, sizeof(float));
-          fp.write((char*)&localIonEntry_p->massResolution, sizeof(float));
-          tmp=(float)localIonEntry_p->size;
-          fp.write((char*)&tmp, sizeof(float));
+          fp.write((char*)&localIonEntry_p->mass, sizeof(double));
+          fp.write((char*)&localIonEntry_p->massResolution, sizeof(double));
+          tmp=localIonEntry_p->size;
+          fp.write((char*)&tmp, sizeof(int));
           for(int row=0; row<m_totalPixels; row++)             //for each pixel
-            fp.write((char*)&localIonEntry_p->set[row], sizeof(float));
+            fp.write((char*)&localIonEntry_p->set[row], sizeof(double));
           col++;
         }
         if(localIonEntry_p->group->group==0) //the last link contains no info.
@@ -620,13 +661,13 @@ List PeakMatrix::massRangeToCentroids(char *baseDir, MASS_RANGE massRangeIn)
 //gaussians_p: Requested Gaussians.
 //size: size of reserved memory.
 //Returns the number of Gaussians.
-int PeakMatrix::getCentroidsIntoRange(MASS_RANGE massRange, float **gaussians_p, int size)
+int PeakMatrix::getCentroidsIntoRange(MASS_RANGE massRange, double **gaussians_p, int size)
 {
   int count=0;
   Common tools;
   bool hit=false;
   int iLow, iHigh, px;
-  
+ 
   for(int px=0; px<m_totalPixels; px++)//for all pixels
   {
     if(m_gaussians_p[px].gauss_p==0) continue; //pixel without Gaussians
@@ -648,7 +689,8 @@ int PeakMatrix::getCentroidsIntoRange(MASS_RANGE massRange, float **gaussians_p,
         gaussians_p[count][0]=m_gaussians_p[px].gauss_p[i].mean;
         gaussians_p[count][1]=fabs(m_gaussians_p[px].gauss_p[i].sigma);
         gaussians_p[count][2]=m_gaussians_p[px].gauss_p[i].weight;
-        gaussians_p[count][3]=(float)px;
+        gaussians_p[count][3]=(double)px;
+//        fprintf(gfp, ".%.4f %.4f %.4f %.0f\n", gaussians_p[count][0], gaussians_p[count][1], gaussians_p[count][2], gaussians_p[count][3]);
         count++;
       }
       if(hit) break;
@@ -669,8 +711,9 @@ int PeakMatrix::getCentroidsIntoRange(MASS_RANGE massRange, float **gaussians_p,
           gaussians_p[count][0]=m_gaussians_p[px].gauss_p[i].mean;
           gaussians_p[count][1]=fabs(m_gaussians_p[px].gauss_p[i].sigma);
           gaussians_p[count][2]=m_gaussians_p[px].gauss_p[i].weight;
-          gaussians_p[count][3]=(float)px;
-          count++;
+          gaussians_p[count][3]=(double)px;
+//          fprintf(gfp, "..%.4f %.4f %.4f %.0f\n", gaussians_p[count][0], gaussians_p[count][1], gaussians_p[count][2], gaussians_p[count][3]);
+            count++;
         }
       }
     }  
@@ -704,8 +747,8 @@ int PeakMatrix::getCentroidsNumberIntoRange(MASS_RANGE massRange)
 //The information is stored in the array pointed to by m_ionEntry_p.
 void PeakMatrix::mtSegmentation(int thrIndex)
 {
-  float mass=0;
-  float **gaussians_p=0; //pointers to info to return.
+  double mass=0;
+  double **gaussians_p=0; //pointers to info to return.
   int totalIons=0;
   Common common;
   MASS_RANGE massRange, massRange2;
@@ -713,13 +756,14 @@ void PeakMatrix::mtSegmentation(int thrIndex)
   massRange.high=m_mzHigh;
   int count=0;
   ION_ENTRY *localIonEntry_p=m_ionEntry_p[thrIndex];
-  
+ 
   int mRange=0; 
-  float maxRange=0;
+  double maxRange=0;
   int maxRangeIndex=-1;
   int iLow =m_massSegment.massRange_p[thrIndex].low;
   int iHigh=m_massSegment.massRange_p[thrIndex].high;
   if(iHigh<iLow) return;
+  
   
   //Determines the maximum cluster number for the mass range to be evaluated.
   //Determines the largest segment in the range.
@@ -727,36 +771,35 @@ void PeakMatrix::mtSegmentation(int thrIndex)
   //as close as the mass resolution allows.  
   for(int i=iLow; i<=iHigh; i++) 
   {
-    float range=m_massRange_p[i].high- m_massRange_p[i].low;
+    double range=m_massRange_p[i].high- m_massRange_p[i].low;
     if(range>maxRange) {maxRange=range; maxRangeIndex=i;} //greater range to evaluate
   }
   //minimum resolution value in this mass range (Da).
   double massRes=m_massRange_p[iLow].low/m_massResolution;//minimum resolution for the thread
   int maxClustersThr=ceil(maxRange/massRes); //maximum clusters
-  
-  int *tmpIndex_p=0, *sortedIndex_p=0;;
-  float *prob_p=0, *mass_p=0, *mass2_p=0;
+
+  int *tmpIndex_p=0;
   double *tmpMass_p=0;
   
-  tmpMass_p=new double[maxClustersThr];
-  tmpIndex_p=new int[maxClustersThr];
-  prob_p=new float[maxClustersThr];
-  mass_p=new float[maxClustersThr];
-  sortedIndex_p=new int [maxClustersThr];
-  
+  tmpMass_p=new double[2*maxClustersThr];
+  tmpIndex_p=new int[2*maxClustersThr];
+
   //maximum Gaussians in the given mass range.
   int maxGNumber, maxGNumber2;
   maxGNumber=setGaussiansNumberIntoSegments(m_massSegment.massRange_p[thrIndex]);
-  gaussians_p=new float*[maxGNumber];
+  gaussians_p=new double*[maxGNumber];
   for(int i=0; i<maxGNumber; i++)
   {
     gaussians_p[i]=0;
-    gaussians_p[i]=new float[4];
+    gaussians_p[i]=new double[4];
   }
-  float *massVect_p=0;
-  massVect_p=new float[maxGNumber];
+  double *massVect_p=0;
+  massVect_p=new double[maxGNumber];
   
   double newMassRes;
+  double  *mass_p=0;
+  double  *centers_p=0;
+  int     *centersSize_p=0, *sortedIndex_p=0, nCenters;
   
   //main loop
   //Each isolated mass packet is segmented.
@@ -767,13 +810,16 @@ void PeakMatrix::mtSegmentation(int thrIndex)
     gMutex.lock();
     gProcSegments++;
     if(thrIndex==0) 
-      if((float)gProcSegments/(float)m_massRangeSize>gVez*0.1) {if(gVez<10) printf("%d ", gVez*10); gVez++;}
-      gMutex.unlock();
-      
+      if((double)gProcSegments/(double)m_massRangeSize>gVez*0.1) {if(gVez<10) printf("%d ", gVez*10); gVez++;}
+    gMutex.unlock();
+
       massRange2.low =m_massRange_p[mrIndex].low; //mass segment to be evaluated
       massRange2.high=m_massRange_p[mrIndex].high;
+  
+
       m_massRange_p[mrIndex].resolution=0;
       int rangeNCenters;
+      
       //Capture of the centroids in the range of masses to be considered.
       rangeNCenters=getCentroidsIntoRange(massRange2, gaussians_p, maxGNumber);
       if(rangeNCenters<=m_pxSupport) continue; //minimum size control.
@@ -784,69 +830,118 @@ void PeakMatrix::mtSegmentation(int thrIndex)
       
       bool hit, hit2;
       int maxIter=40;
-      float convergencia=1e-5;
+      double convergencia=1e-5;
       
       double massRes=massRange2.low/m_massResolution; //resolution (Da)
+      double massResSqr2=massRes*massRes; //Da*Da
       newMassRes=massRes;
       double massResSqr=massRes*massRes; //Da*Da
       int nClusters, iter=0;
       hit=true;
       int maxMasterIter=10; //maximum coarse iterations.
-      
+
       //It is assumed that the maximum number of clusters coincides with the case where there are 
       //Gaussians in all possible spaces.
       int maxClustersRange=ceil((massRange2.high-massRange2.low)/massRes);
       if(maxClustersRange<0) {continue;}
       else if(maxClustersRange==0) {maxClustersRange=1;} //single mass range case.
       
-      float*centers_p=0;
-      int *centersSize_p=0, nCenters;
-      centers_p=new float[maxClustersRange+1];
-      centersSize_p=new int[maxClustersRange+1];
-      //    centers_p=new float[rangeNCenters];
-      //    centersSize_p=new int[rangeNCenters];
+      centers_p=new double[2*maxClustersRange+1];
+      centersSize_p=new int[2*maxClustersRange+1];
+      mass_p=new double[2*maxClustersRange+1];
+      sortedIndex_p=new int [2*maxClustersRange+1];
+      bool *clustersGood_p=0;
+      clustersGood_p=new bool[2*maxClustersRange+1]; //info de grupos con dispersión alcanzada
       
+      for(int i=0; i<2*maxClustersRange; i++)
+      {
+        mass_p[i]=0;
+        sortedIndex_p[i]=0;
+        centers_p[i]=0;
+        centersSize_p[i]=0;
+      }
       
-      nCenters=centers(massVect_p, rangeNCenters, massRes, centers_p, centersSize_p);
-      //for(int i=0; i<nCenters; i++)
-      //  fprintf(fp, "[%3d]%9.4f %d\n",i, centers_p[i], centersSize_p[i]);
+      //histogram
+      nCenters=centers(massVect_p, rangeNCenters, 0.9*massRes, centers_p, centersSize_p);
+
       if(nCenters<=0) {continue;}
-      
+
       //indexes ordered from highest to lowest probability.
       common.sortDownI(centersSize_p, sortedIndex_p, nCenters);
-      
+
       for(int i=0; i<nCenters; i++) //initialization masses for clusters.
         mass_p[i]=centers_p[sortedIndex_p[i]]; 
-      
+
       //class for segmentation
-      KmeansR kmeans(massVect_p, rangeNCenters, maxIter, convergencia);
-      if(kmeans.m_error==1) {printf("###2\n"); continue;}
-      mass2_p=mass_p;
-      
+      KmeansR kmeans(massVect_p, rangeNCenters, nCenters, maxIter, convergencia);
+      if(kmeans.m_error==1)
+        {
+        printf("warning: k-means failed in the constructor.\n"); 
+        continue;
+        } //if algorithm fails
+
+      int acuWhile=0, acuWhile2=0;
+      int clusterLow=0, clusterHigh=nCenters, lastCenter=-1;
       while(true) //Iterate until goals are reached, relaxing constraints if necessary.
       {
+        for(int i=0; i<maxClustersRange; i++) clustersGood_p[i]=false; //all clusters bad
         //Iterates until all clusters reach the desired resolution or are small groups
         //with each iteration, the number of clusters increases by 1.
-        for(nClusters=1; nClusters<=nCenters; nClusters++) //clusters search
+        acuWhile2=0;
+        while(true) //successive approximations
         {
-          if(nClusters>nCenters) mass_p=0;// aleatoriedad
+          kmeans.m_kStruct.nClusters=0; //init
+          nClusters=(clusterHigh+clusterLow+1)/2; //central value
+          if(lastCenter==nClusters) break;
+          lastCenter=nClusters;
+          
+          if(++acuWhile2>maxIter) break; //limit control
+            
           if(kmeans.getClusters(nClusters, mass_p)!=0) //clusters are obtained.
-          {hit=false; printf("###3\n"); break;} //if algorithm fails
-          hit=true;
+          {
+            hit=false; 
+            printf("warning: k-means fail with cluster=%d\n", nClusters); 
+            kmeans.m_kStruct.nClusters=0; 
+            break;
+            } //if algorithm fails
+          
+          hit=false;
           //The validity of the obtained clusters is evaluated:
           //All large clusters must have low dispersion.
           //Low dispersion if it is < mass resolution.
+          int acu=0;
           for(int c=0; c<nClusters; c++) 
           {
             int cPixels=kmeans.m_kStruct.clusters_p[c].data.size; //px that support
             //dispersion measure.
             double res=kmeans.m_kStruct.clusters_p[c].withinss/cPixels; //mean square distance.
-            if(res>massResSqr)
-            {hit=false; break;}         //requires iteration to improve.
+            if(res<massResSqr) //requires iteration to improve.
+            {
+              acu++;
+              clustersGood_p[c]=true; //good cluster
+            } 
           }
-          if(hit) {break;}                //all groups of size>minimum have low dispersion.
+    
+          //A 10% rate of high-dispersion groups is accepted if the number of clusters exceeds 10.
+          if(nCenters>10 && acu>nCenters*0.9)
+            {
+            hit=true;
+            if(fabs(clusterHigh-nClusters<=1)) break;
+            }
+          //If there are few of them (<10), all must achieve the desired dispersion.
+          else if(nCenters<=10 && acu==nCenters)
+          {
+            hit=true;
+            if(fabs(clusterHigh-nClusters<=1)) break;
+          }
+
+          if(hit)
+                {clusterHigh=nClusters;} //si OK, se busca que falle
+          else  {clusterLow =nClusters;} //si KO, se busca que acierte
+          
         } //end for() for nClusters
-        
+
+        if(kmeans.m_kStruct.nClusters==0) break;        
         //If the desired conditions are not met, the constraints are relaxed and iterates completely.
         if(!hit) 
         {
@@ -865,23 +960,29 @@ void PeakMatrix::mtSegmentation(int thrIndex)
         }
         else break;
       }//while end
-      
+
       //The resolution with which the segmentation has been resolved is noted.
       m_massRange_p[mrIndex].resolution=newMassRes*1e6/m_massRange_p[mrIndex].low;
       
       if(iter>=maxMasterIter) {kmeans.freeClusters();continue;}//voided segment.
       
       //increasing mass ordering
+      int nGoodClusters=0;
       for(int c=0; c<kmeans.m_kStruct.nClusters; c++)
       {
-        tmpMass_p[c]=kmeans.m_kStruct.clusters_p[c].center;
+        if(clustersGood_p[c]==true)
+        {
+          tmpMass_p[c]=kmeans.m_kStruct.clusters_p[c].center;
+          nGoodClusters++;
+        }
+        else  tmpMass_p[c]=1e30;
       }
-      common.sortUp(tmpMass_p, tmpIndex_p, kmeans.m_kStruct.nClusters);
-      
+      common.sortUp(tmpMass_p, tmpIndex_p, nGoodClusters); //The interest groups come first.
+
       //The results are saved.
       //Memory is created to store the cluster information about the peak array.
       //These are structures linked by pointers so they can grow.
-      for(int c=0; c<kmeans.m_kStruct.nClusters; c++)
+      for(int c=0; c<nGoodClusters; c++)
       {
         int sortIndex=tmpIndex_p[c]; //index to cluster
         
@@ -889,16 +990,15 @@ void PeakMatrix::mtSegmentation(int thrIndex)
         int size=kmeans.m_kStruct.clusters_p[sortIndex].data.size; //cluster size
         if(size<m_pxSupport) continue;
         
-        localIonEntry_p->set=new float[m_totalPixels]; //memory for intensities
+        localIonEntry_p->set=new double[m_totalPixels]; //memory for intensities
         for(int i=0; i<m_totalPixels; i++) //reset all intensities. 
           localIonEntry_p->set[i]=0.0;
         
         localIonEntry_p->mass=kmeans.m_kStruct.clusters_p[sortIndex].center; //centroide
         localIonEntry_p->size=size; //intensities
-        localIonEntry_p->massResolution=massRange2.low/newMassRes; //resolution (Da)
+        localIonEntry_p->massResolution=1e6*newMassRes/massRange2.low; //resolution (ppm)
         
         totalIons++; //input counter (centroides)
-        
         for(int i=0; i<size; i++) //copy of intensities
         {
           int index=kmeans.m_kStruct.clusters_p[sortIndex].data.set[i]; //Gaussian index
@@ -912,19 +1012,20 @@ void PeakMatrix::mtSegmentation(int thrIndex)
         localIonEntry_p->set=0;
         localIonEntry_p->size=0;
       }
-      
-      if(centers_p)     delete []centers_p;
-      if(centersSize_p) delete []centersSize_p;
+      if(centers_p)     {delete []centers_p; centers_p=0;}
+      if(centersSize_p) {delete []centersSize_p; centersSize_p=0;}
+      if(mass_p) {delete []mass_p; mass_p=0;}
+      if(sortedIndex_p) {delete []sortedIndex_p; sortedIndex_p=0;}
+      if(clustersGood_p) {delete [] clustersGood_p; clustersGood_p=0;}
       
   } //end of analysis of a mass segment.
   
-  m_totalIons[thrIndex]=totalIons;
-  
+    m_totalIons[thrIndex]=totalIons;
+//printf("....[%2d]%d\n", thrIndex, totalIons);
+
   //reserved memory is freed.
   if(tmpMass_p) delete [] tmpMass_p;
   if(tmpIndex_p) delete [] tmpIndex_p;
-  if(prob_p) delete [] prob_p;
-  if(mass2_p) delete [] mass2_p;
   if(sortedIndex_p) delete []sortedIndex_p;
   
   if(massVect_p) delete [] massVect_p;
@@ -933,6 +1034,7 @@ void PeakMatrix::mtSegmentation(int thrIndex)
     for(int i=0; i<maxGNumber; i++)
       if(gaussians_p[i]) delete [] gaussians_p[i];
       delete []gaussians_p;
+
   }
 }
 
@@ -944,7 +1046,7 @@ void PeakMatrix::mtSegmentation(int thrIndex)
 int PeakMatrix::setGaussiansNumberIntoSegments2(MASS_RANGE massRange)
 {
   int maxGaussians=0, nGaussians, px;
-  float massLow, massHigh;
+  double massLow, massHigh;
   for(int mr=massRange.low; mr<=massRange.high; mr++) //for the entire mass range
   {
     massLow =m_massRange_p[mr].low;  //mass range of this segment
@@ -979,7 +1081,7 @@ int PeakMatrix::setGaussiansNumberIntoSegments(MASS_RANGE massRange)
   int iLow, iHigh, px;
   int maxGaussians=0, nGaussians;
   
-  float massLow, massHigh;
+  double massLow, massHigh;
   for(int mr=massRange.low; mr<=massRange.high; mr++) //for the entire mass range
   {
     massLow =m_massRange_p[mr].low;  //mass range of this segment
@@ -1033,21 +1135,22 @@ int PeakMatrix::setGaussiansNumberIntoSegments(MASS_RANGE massRange)
 // Centers_p: array of final centers.
 // centerSize_p: number of elements that make up each center.
 // Returns the number of centers detected (length of the centers_p array).
-int PeakMatrix::centers(float *mass_p, int size, float segmentSize, float* centers_p, int *centerSize_p)
+int PeakMatrix::centers(double *mass_p, int size, double segmentSize, double* centers_p, int *centerSize_p)
 {
   if(size<=0) return 0;
   
   int *sortedIndex_p=0;
   sortedIndex_p=new int[size];
   Common common;
-  common.sortUpF(mass_p, sortedIndex_p, size); //increasing ordering of masses.
-  
+  common.sortUp(mass_p, sortedIndex_p, size); //increasing ordering of masses.
+
   centers_p[0]=mass_p[sortedIndex_p[0]];
   centerSize_p[0]=1;
-  
+//  gfp=fopen("report.txt", "a");
   int k=0;
   for(int i=1; i<size; i++) //iterative averaging.
   {
+//    fprintf(gfp,"[%5d]%.5f\n",i, mass_p[sortedIndex_p[i]]);
     if(fabs(mass_p[sortedIndex_p[i]]-centers_p[k])<segmentSize)
     {
       centerSize_p[k]++;
@@ -1059,6 +1162,19 @@ int PeakMatrix::centers(float *mass_p, int size, float segmentSize, float* cente
       centerSize_p[k]=1;
     }
   }
+/*
+  for(int i=0; i<k && i<10; i++) {
+    if(i<k-1)
+    {
+    printf("[%.4d]%9.5f %4d %.6f  ",i, centers_p[i], centerSize_p[i], centers_p[i+1]- centers_p[i]);
+      if((centers_p[i+1]- centers_p[i])<0.0044) fprintf(gfp, "..................%.5f", centers_p[i]);
+    }
+    else 
+      printf("[%.4d]%9.5f %4d  ",i, centers_p[i], centerSize_p[i]);
+  }
+printf("\n");
+*/
+//  fclose(gfp);
   if(sortedIndex_p) delete [] sortedIndex_p;
   return k+1;
 }

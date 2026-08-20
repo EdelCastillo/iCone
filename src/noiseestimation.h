@@ -39,7 +39,7 @@ public:
   //spectro_p: Pointer to data.
   //size: Size of the data array.
   //Returns the estimated noise value of a spectrum.
-  float getNoise(float *spectro_p, int size);
+  double getNoise(double *spectro_p, int size);
   
   //getSNR()
   //Sets the signal-to-noise ratio (SNR) of a spectrum.
@@ -47,26 +47,26 @@ public:
   //size: Size of the data array.
   //Sets the result to the SNR_p pointer.
   //Returns the noise estimation
-  float getSNR(float *spectro_p, int size, float *SNR_p);
+  double getSNR(double *spectro_p, int size, double *SNR_p);
 
 private:  
   //getNoise_mad()
   //spectro_p: Pointer to data.
   //size: Size of the data array.
   //Returns the noise estimate using the MAD (median absolute deviation) method.
-  float getNoise_mad(float *spectro_p, int size);
+  double getNoise_mad(double *spectro_p, int size);
   
   //getNoise_sd()
   //spectro_p: Pointer to data.
   //size: Size of the data array.
   //Returns the noise estimate using the standard deviation method.
-  float getNoise_sd(float *spectro_p, int size);
+  double getNoise_sd(double *spectro_p, int size);
   
   //getNoise_diff()
   //spectro_p: Pointer to data.
   //size: Size of the data array.
   //Returns the noise estimate using the difference method.
-  float getNoise_diff(float *spectro_p, int size);
+  double getNoise_diff(double *spectro_p, int size);
   
   //gaussSmoothing()
   //Convolution of a Gaussian with the signal.
@@ -75,7 +75,7 @@ private:
   //smoothing_p: Pointer to smoothed data.
   //Uses the data generated in the constructor for filtering.
   //Returns 0
-  int gaussSmoothing(float *spectro_p, int size, float *smoothing_p);
+  int gaussSmoothing(double *spectro_p, int size, double *smoothing_p);
     
   //gaussian()
   //Generates a Gaussian over the data x with parameters mean and sd.

@@ -44,7 +44,7 @@ public:
   //     pxSupport: minimum percentage of pixels that must support an ion for it to be considered.
   //   massRange_p: array of structures with information on isolated mass segments.
   //   gaussians_p: array of structures with information about Gaussians.
-  PeakMatrix(int totalPixels, float massResolution, float mzHigh, float mzLow, float pxSupport, MASS_RANGE *massRange_p, GAUSS_SP *gaussians_p, int nThreads);
+  PeakMatrix(int totalPixels, double massResolution, double mzHigh, double mzLow, double pxSupport, MASS_RANGE *massRange_p, GAUSS_SP *gaussians_p, int nThreads);
   
   //destructor
   ~PeakMatrix();
@@ -77,7 +77,7 @@ public:
   //massRange: Mass range from which to extract the Gaussians.
   //gaussians_p: Requested Gaussians.
   //Returns the number of Gaussians.
-  int getCentroidsIntoRange(MASS_RANGE massRange, float **gaussians_p, int size);
+  int getCentroidsIntoRange(MASS_RANGE massRange, double **gaussians_p, int size);
   
   //setGaussiansNumberIntoSegments()
   //Determines the maximum number of Gaussians over the given mass intervals and all pixels.
@@ -105,7 +105,7 @@ public:
   // Centers_p: array of final centers.
   // centerSize_p: number of elements that make up each center.
   // Returns the number of centers detected (length of the centers_p array).
-  int centers(float *mass_p, int size, float segmentSize, float* centers_p, int *centerSize_p);
+  int centers(double *mass_p, int size, double segmentSize, double* centers_p, int *centerSize_p);
   
   ION_ENTRY     **m_ionEntry_p;
   MASS_RANGE    *m_massRange_p;
@@ -119,7 +119,7 @@ public:
                 m_pxSupport;
   std::thread  *m_thread_p[MAX_THREADS];                //thread that processes the spectrum.
 
-  float         m_massResolution, 
+  double         m_massResolution, 
                 m_mzHigh, 
                 m_mzLow; 
   PIXEL_XY      *m_pixelsCoordinates_p;

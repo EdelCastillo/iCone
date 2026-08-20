@@ -1,7 +1,7 @@
 ---
 title: "iCone: basic information"
 author: "E del Castillo"
-date: 'January, 2026'
+date: 'August, 2026'
 output: html_document
 ---
 
@@ -23,20 +23,20 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
 ### **Step 1**.- A list with the necessary parameters is generated.
 
 > For **example**:  
->**params**\ <-list("massResolution"=30000, "minPixelsSupport"=5, "SNR"=3,  "SNRmethod"="estnoise_mad", "linkedPeaks"=3);
+>**params**\ <-list("tolerance"=33, "minPixelsSupport"=5, "SNR"=3,  "SNRmethod"="estnoise_mad", "linkedPeaks"=3);
 
 **Description of the parameters:**
 
 ```         
-massResolution:     Desired mass resolution for the peak matrix (mz/delta_mz).
+      tolerance:    Desired tolerance for the centroids (ppm)
 minPixelSupport:    Minimum percentage of pixels that must provide intensity information for each mass (mz).
                     That is, in the peak matrix, the relative number of pixels with non-zero intensity must be equal to or greater than this.
-SNR:                Signal-to-noise ratio. Discards information based on its proximity to the estimated noise level.
-noiseMethod:        Procedure used for noise estimation:
+            SNR:    Signal-to-noise ratio. Discards information based on its proximity to the estimated noise level.
+    noiseMethod:    Procedure used for noise estimation:
                       estnoise_diff:  Average of the absolute differences with respect to the mean value.
                       estnoise_sd:    Standard deviation of the absolute differences (Gaussian filter).
                       estnoise_mad:   Median of the absolute deviations (Gaussian filter).
-linkedPeaks:        Two peaks are considered linked if they are closer than the given standard deviation.                         
+    linkedPeaks:    Two peaks are considered linked if they are closer than the given standard deviation.                         
 ```
 
 ### **Step 2**.- The peak selection algorithm is applied and its peak matrix is obtained:
@@ -61,7 +61,7 @@ linkedPeaks:        Two peaks are considered linked if they are closer than the 
   return a list: 
     peakMatrix: Matrix of peak (centroids) rows = pixels, columns = intensity of each pixel.
           mass: Vector with the masses associated with each column of peakMatrix.
-massResolution: Vector with the mass resolution achieved in the peak matrix (mz/delta_mz).
+     tolerance: Vector with the mass tolerance achieved in the peak matrix (ppm).
  pixelsSupport: Vector with the number of pixels in each column with non-zero intensity.
    coordinates: Matrix with pixel coordinates (X/Y).
   pixelsSample: Vector with the number of pixels in each of the samples. In the peakMatrix and coordinates they appear in the same order.
@@ -84,7 +84,7 @@ Reports information about a single spectrum.
 imzML_file_path: Absolute path to the filename with the imzML extension.
                  The attached binary file, with the ibd extension, must be in the same directory.
          params: List of parameters:
-                  "massResolution": mass resolution with which the spectra were acquired (mz/deltaMz).
+                       "tolerance": desired tolerance for the centroids (ppm)
                              "SNR": signal-to-noise ratio
                      "noiseMethod": method for estimating noise (estnoise_diff, estnoise_sd, estnoise_mad).
        initMass: Initial mass to consider.
@@ -108,21 +108,21 @@ Report the average value of the Gaussian from all data into .imzML file.
 imzML_file_path: Absolute path to the filename with the imzML extension.
                  The attached binary file, with the ibd extension, must be in the same directory.
          params: List of parameters.
-            "massResolution": mass resolution (mz/deltaMz).
+                 "tolerance": desired tolerance for the centroids (ppm)
                        "SNR": signal-to-noise ratio
                "noiseMethod": method for estimating noise (estnoise_diff, estnoise_sd, estnoise_mad).
        initMass: Initial mass to consider.
       finalMass: Final   mass to consider.
          pxList: list of pixels. First pixel=1. By default everyone.
-   overSampling: interval between points on the mass axis = massResolution/overSampling.
+   overSampling: interval between points on the mass axis = tolerance/overSampling.
        nThreads: number of threads
        
   return a list: 
-       averageMz: Vector with mass axis. A mass bin is 1/4 of the massResolution parameter
+       averageMz: Vector with mass axis. A mass bin is 1/4 of the tolerance parameter
 averageIntensity: Vector with intensity axis.
 ```
 
-> lst <-**getAverageSpectrum**(imzML_file_path, initMass, finalMass, pxList, massResolution, overSampling)
+> lst <-**getAverageSpectrum**(imzML_file_path, initMass, finalMass, pxList, tolerance, overSampling)
 
 Report the average value of the intensities from all data into .imzML file.
 Noise is not taken into account.
@@ -134,11 +134,11 @@ imzML_file_path: Absolute path to the filename with the imzML extension.
        initMass: Initial mass to consider.
       finalMass: Final   mass to consider.
          pxList: list of pixels. First pixel=1. By default everyone.
- massResolution: mass resolution (mz/deltaMz).
-   overSampling: interval between points on the mass axis = massResolution/overSampling.
+      tolerance: desired tolerance for the centroids (ppm)
+   overSampling: interval between points on the mass axis = tolerance/overSampling.
           
   return a list: 
-       averageMz: Vector with mass axis. A mass bin is 1/2 of the massResolution parameter
+       averageMz: Vector with mass axis. A mass bin is 1/2 of the tolerance parameter
 averageIntensity: Vector with intensity axis.
 ```
 
@@ -193,7 +193,7 @@ Return a list whit the peak matrix
   return a list:
      peakMatrix: Matrix of peak (centroids) rows = pixels, columns = intensity of each pixel.
            mass: Vector with the masses associated with each column of peakMatrix.
- massResolution: mass resolution associated with each mass.
+      tolerance: desired tolerance for the centroids (ppm)
   pixelsSupport: Vector with the number of pixels in each column with non-zero intensity. 
 ```
 
@@ -219,7 +219,7 @@ Returns a column information of the peak matrix
  return a list:
       intensity: vector of intesities 
            mass: mass associated with the column of peakMatrix.
- massResolution: final mass resolution at centroid.
+      tolerance: final tolerance at centroid.
   pixelsSupport: number of pixels in column with non-zero intensity. 
 ```
 

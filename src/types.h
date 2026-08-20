@@ -45,7 +45,7 @@
 
     typedef struct GROUP_F{
         int 	size;
-        float 	*set;
+        double 	*set;
         struct GROUP_F 	*group; //group of chained real elements
     }GROUP_F;
 
@@ -56,7 +56,7 @@
 
     typedef struct
     {
-      float   low,          //low mass
+      double   low,          //low mass
               high;         //high mass
       double  resolution;   //resolution with which the range is resolved.
       int     nGaussians;   //Gaussians in range
@@ -89,7 +89,7 @@
     
     typedef struct SEGMENT
     {
-      float   lowMass,        //lower mass of the segment
+      double   lowMass,        //lower mass of the segment
               highMass;       //upper mass of the segment
       int     nGaussians;     //number of Gaissians in the segment
       SEGMENT *next;          //pointer to the next link
@@ -104,7 +104,7 @@
     
     typedef struct ION_ENTRY
     {
-      float 	*set,          //items
+      double 	*set,          //items
               mass,
               massResolution;
       int 	  size;          //group size.
@@ -113,7 +113,7 @@
     
     typedef struct
     {
-      float *int_p,         //intensity array
+      double *int_p,         //intensity array
             *mass_p,        //mass array
             *SNR_p,         //signal-to-noise ratio array
             *tmpInt_p,      //array of temporal intensities

@@ -39,7 +39,7 @@
  //'           noise: noise estimation
  //'     
  // [[Rcpp::export]]
-List rGetPixelGaussians(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, int pixel)
+List rGetPixelGaussians(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, int pixel)
 {
   OnePixel onePixel(ibdFname, imzML, params, mzLow, mzHigh, pixel);  
   
@@ -63,7 +63,7 @@ List rGetPixelGaussians(const char* ibdFname, Rcpp::List imzML, Rcpp::List param
 // SNR: signal-to-noise ratio associated with each mass of the raw spectrum.
 // noise: noise estimation
 // require of rGetPixelGaussians()
-List OnePixel::getPixelGaussians(int px, float mzLow, float mzHigh)
+List OnePixel::getPixelGaussians(int px, double mzLow, double mzHigh)
 {
   if(px<0 || px>=m_NPixels) {return 0;}
   if(!m_gaussians.gauss_p)  {return 0;}
@@ -110,7 +110,7 @@ List OnePixel::getPixelGaussians(int px, float mzLow, float mzHigh)
 //Constructor
 //captures input information, allocates memory and initializes.
 ////////////////////////////////////////////////////////////////////////////////
-OnePixel::OnePixel(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, float mzLow, float mzHigh, int pixel)
+OnePixel::OnePixel(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, int pixel)
 {
   m_mzLow=mzLow;
   m_mzHigh=mzHigh;
@@ -183,12 +183,12 @@ OnePixel::OnePixel(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, fl
 
     //keeps the info of a spectrum, along with the thread that processes it.
     //memory reservation and initialization.
-      m_spectro.int_p      =new float[m_mzLength];
-      m_spectro.mass_p     =new float[m_mzLength];
-      m_spectro.SNR_p      =new float[m_mzLength];
-      m_spectro.tmpMass_p  =new float[m_mzLength];
-      m_spectro.tmpInt_p   =new float[m_mzLength];
-      m_spectro.tmpSNR_p   =new float[m_mzLength];
+      m_spectro.int_p      =new double[m_mzLength];
+      m_spectro.mass_p     =new double[m_mzLength];
+      m_spectro.SNR_p      =new double[m_mzLength];
+      m_spectro.tmpMass_p  =new double[m_mzLength];
+      m_spectro.tmpInt_p   =new double[m_mzLength];
+      m_spectro.tmpSNR_p   =new double[m_mzLength];
       m_spectro.sort_p     =new int  [m_mzLength];
       m_spectro.size=0;
  //printf("...end constructor %d\n", m_mzLength);   
@@ -265,7 +265,7 @@ int OnePixel::rawToGaussians()
       return 0;
     }
     //mass ordination.
-    common.sortUpF(m_spectro.tmpMass_p+iMzLow, m_spectro.sort_p, spSize);
+    common.sortUp(m_spectro.tmpMass_p+iMzLow, m_spectro.sort_p, spSize);
 
     //The part of interest is extracted from the mass, intensity and SNR vectors.
     for(int i=0; i<spSize; i++) 
@@ -365,10 +365,10 @@ int OnePixel::rawToGaussians()
 //Returns the number of Gaussians or a value < 0 on failure.
 int OnePixel::getGaussians(SPECTRO *spectro_p, GAUSS_PARAMS *gaussians_p)
 {
-  float *intSpectrum_p=spectro_p->int_p, *massSpectrum_p=spectro_p->mass_p;
+  double *intSpectrum_p=spectro_p->int_p, *massSpectrum_p=spectro_p->mass_p;
   int intSize=spectro_p->size;
   
-  float minMeanPxMag=spectro_p->noise*m_SNR; //minimum value to consider a peak as valid.
+  double minMeanPxMag=spectro_p->noise*m_SNR; //minimum value to consider a peak as valid.
   //class for conversion to Gaussians.
   GmmPeak gmmPeak(minMeanPxMag);
   

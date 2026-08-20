@@ -84,14 +84,14 @@ NumericVector GetImzMLData::getPixelIntensity(int pixel)
 //pixel: Reference to the desired spectrum.
 //data_p: Pointer to the mass data.
 //Returns the size of the returned data.
-int GetImzMLData::getPixelMassF(int pixel, float *data_p)
+int GetImzMLData::getPixelMassF(int pixel, double *data_p)
 {
   int mzSize=m_mzLength[pixel];
   NumericVector mass(mzSize);
   m_myReader_p->readMzData ((std::streampos)m_mzOffset[pixel], mzSize, mass.begin());
   if(data_p==0) return -1;
   for(int i=0; i<mzSize; i++)
-    data_p[i]=(float)mass[i];
+    data_p[i]=(double)mass[i];
   return mzSize;
 }
 
@@ -99,7 +99,7 @@ int GetImzMLData::getPixelMassF(int pixel, float *data_p)
 //pixel: Reference to the desired spectrum.
 //data_p: Pointer to the intensity data.
 //Returns the size of the returned data.
-int GetImzMLData::getPixelIntensityF(int pixel, float *data_p)
+int GetImzMLData::getPixelIntensityF(int pixel, double *data_p)
 {
   int intSize=m_intLength[pixel];
   NumericVector intensity(intSize);
@@ -107,7 +107,7 @@ int GetImzMLData::getPixelIntensityF(int pixel, float *data_p)
   if(data_p==0) return -1;
   for(int i=0; i<intSize; i++)
   {
-    data_p[i]=(float)intensity[i];
+    data_p[i]=(double)intensity[i];
   }
   return intSize;
 }

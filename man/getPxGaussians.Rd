@@ -16,7 +16,7 @@ getPixelGaussians(
 )
 }
 \arguments{
-\item{params}{"massResolution": mass resolution with which the spectra were acquired (mz/deltaMz).
+\item{params}{"tolerance": desired tolerance for the centroids (ppm)
 "SNR": signal-to-noise ratio
 "noiseMethod": method for estimating noise.}
 

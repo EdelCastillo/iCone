@@ -39,7 +39,7 @@
  //'           noise: noise estimation
  //'     
  // [[Rcpp::export]]
-List rGetGaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp::NumericVector mz, Rcpp::List params, float mzLow, float mzHigh)
+List rGetGaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp::NumericVector mz, Rcpp::List params, double mzLow, double mzHigh)
 {
   if(mzLow==0) mzLow=mz[0];
   if(mzHigh==0) mzHigh=mz[mz.length()-1];
@@ -58,7 +58,7 @@ List rGetGaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp::NumericVecto
 //Constructor
 //captures input information, allocates memory and initializes.
 ////////////////////////////////////////////////////////////////////////////////
-GaussiansFromSpectrum::GaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp::NumericVector mz, Rcpp::List params, float mzLow, float mzHigh)
+GaussiansFromSpectrum::GaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp::NumericVector mz, Rcpp::List params, double mzLow, double mzHigh)
 {
   m_mzLow=mzLow;
   m_mzHigh=mzHigh;
@@ -106,7 +106,7 @@ GaussiansFromSpectrum::GaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp
   else if(strcmp(SNRmethod, "estnoise_mad") ==0) {m_SNRmethod=3; }
   else {m_SNRmethod=0; printf("unknow noise method: %s so, estnoise_mad is used\n", SNRmethod);}
   m_noiseEst_p=new NoiseEstimation(m_SNRmethod, 1, 9);
-  
+
   //memory and its initialization
     m_enable=true; //terminates threads if false.
 
@@ -114,12 +114,12 @@ GaussiansFromSpectrum::GaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp
 
     //keeps the info of a spectrum, along with the thread that processes it.
     //memory reservation and initialization.
-      m_spectro.int_p      =new float[m_mzLength];
-      m_spectro.mass_p     =new float[m_mzLength];
-      m_spectro.SNR_p      =new float[m_mzLength];
-      m_spectro.tmpMass_p  =new float[m_mzLength];
-      m_spectro.tmpInt_p   =new float[m_mzLength];
-      m_spectro.tmpSNR_p   =new float[m_mzLength];
+      m_spectro.int_p      =new double[m_mzLength];
+      m_spectro.mass_p     =new double[m_mzLength];
+      m_spectro.SNR_p      =new double[m_mzLength];
+      m_spectro.tmpMass_p  =new double[m_mzLength];
+      m_spectro.tmpInt_p   =new double[m_mzLength];
+      m_spectro.tmpSNR_p   =new double[m_mzLength];
       m_spectro.sort_p     =new int  [m_mzLength];
       m_spectro.size=0;
     
@@ -178,6 +178,12 @@ int GaussiansFromSpectrum::rawToGaussians()
     m_noise=m_noiseEst_p->getSNR(m_spectro.tmpInt_p, m_spectro.size,  m_spectro.tmpSNR_p);
     m_spectro.noise=m_noise;
     
+    printf("estimated noise=%.4f\n", m_noise);
+    if(m_noise<1e-3)
+    {
+      printf("The estimated noise is too low. It is suggested to use a different estimation algorithm.\nAvailable: estnoise_diff, estnoise_sd, estnoise_mad\n");
+    }
+
     //the spectrum is limited to the range of interest.
     iMzLow =common.nearestIndex(m_mzLow,  m_spectro.tmpMass_p, spSize); //low index
     iMzHigh=common.nearestIndex(m_mzHigh, m_spectro.tmpMass_p, spSize); //high index
@@ -195,7 +201,7 @@ int GaussiansFromSpectrum::rawToGaussians()
       return 0;
     }
     //mass ordination.
-    common.sortUpF(m_spectro.tmpMass_p+iMzLow, m_spectro.sort_p, spSize);
+    common.sortUp(m_spectro.tmpMass_p+iMzLow, m_spectro.sort_p, spSize);
 
     //The part of interest is extracted from the mass, intensity and SNR vectors.
     for(int i=0; i<spSize; i++) 
@@ -295,10 +301,10 @@ int GaussiansFromSpectrum::rawToGaussians()
 //Returns the number of Gaussians or a value < 0 on failure.
 int GaussiansFromSpectrum::getGaussians(SPECTRO *spectro_p, GAUSS_PARAMS *gaussians_p)
 {
-  float *intSpectrum_p=spectro_p->int_p, *massSpectrum_p=spectro_p->mass_p;
+  double *intSpectrum_p=spectro_p->int_p, *massSpectrum_p=spectro_p->mass_p;
   int intSize=spectro_p->size;
   
-  float minMeanPxMag=spectro_p->noise*m_SNR; //minimum value to consider a peak as valid.
+  double minMeanPxMag=spectro_p->noise*m_SNR; //minimum value to consider a peak as valid.
   //class for conversion to Gaussians.
   GmmPeak gmmPeak(minMeanPxMag);
   
@@ -379,7 +385,7 @@ int GaussiansFromSpectrum::getGaussians(SPECTRO *spectro_p, GAUSS_PARAMS *gaussi
  // noise: noise estimation
  // Returns a list with information about a spectrum
  // requires of rawToGaussians() first
- List GaussiansFromSpectrum::getGaussiansList(float mzLow, float mzHigh)
+ List GaussiansFromSpectrum::getGaussiansList(double mzLow, double mzHigh)
  {
    if(!m_gaussians.gauss_p)  {return 0;}
    
