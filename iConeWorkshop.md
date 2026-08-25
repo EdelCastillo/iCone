@@ -32,7 +32,7 @@ For a tolerance of 8.33 ppm:
 
 > The first step is to create a list with the desired parameters. 
 > For example, to obtain the peak matrix corresponding to the 30k sample, with a signal-to-noise ratio of 3, using the 'estnoise_mad' algorithm for noise estimation, 
-with a tolerance of 33.33 ppm, a minimum number of supporting pixels of 10%, and a standard deviation of 3 (defect) to consider peaks as overlapping (those that are closest together).
+with a tolerance of 33.33 ppm and a minimum number of supporting pixels of 10%.
 ```
 > params30 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=10, "tolerance"=33.33)
 ```
@@ -113,25 +113,25 @@ pk30k$pixelSize_um
 > To compare the results, we use the `statisticalQuality()` function. It reports statistical values regarding the deviation between the two m/z vectors being compared. This deviation is determined from the nearest centroids in the high-resolution sample to those in the low-resolution sample.
 ```
 > statisticalQuality() arguments: 
-> mzRef       is the high-resolution centroid vector.
-> mzTest      is the low-resolution centroid vector.
+> mzRef      is the high-resolution centroid vector.
+> mzTest     is the low-resolution centroid vector.
 > tolerance  indicates the minimum distance for the result to be considered a false positive (expressed in ppm).
 
 > statisticalQuality() report: 
-> refSize   size of the high-resolution centroid vector.
-> testSize  size of the low-resolution centroid vector.
-> mean      mean of the deviations between centroids.
-> sigma     standard deviation of the deviations between centroids.
-> median    median of the deviations between centroids.
-> repes     number of low-resolution centroids that share a common high-resolution centroid.
+> refSize    size of the high-resolution centroid vector.
+> testSize   size of the low-resolution centroid vector.
+> mean       mean of the deviations between centroids.
+> sigma      standard deviation of the deviations between centroids.
+> median     median of the deviations between centroids.
+> FP         False Positive: number of low-resolution centroids with a deviation exceeding 1.5 times the tolerance relative to the nearest high-resolution centroid.
 ```
 > Use
 ```
 > statisticalQuality(pk120k$mass, pk30k$mass, 33.33)
-refSize=9439  testSize=1010     mean=3.293  sigma=3.917  median=1.763  repes:1 (0.1%)
+  refSize=7842  testSize=1013     mean=3.4347  sigma=4.1666  median=1.7812  FP:1 (0.1%)
 
 > statisticalQuality(pk120k$mass, pk30k$mass, 16.66)
- refSize=9439  testSize=1545     mean=1.521  sigma=2.220  median=0.718  repes:44 (2.8%)
+  refSize=7842  testSize=1496     mean=1.6092  sigma=2.3784  median=0.6295  FP:0 (0.0%)
 ``` 
 ### Summary
 To compare, for example, the 30k sample with the 120k sample, we will do the following:
@@ -141,5 +141,5 @@ To compare, for example, the 30k sample with the 120k sample, we will do the fol
 > params120 <-list("SNR"=3, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "tolerance"=8.33)
 > pk120k <-getPeakMatrix("/MSI/231211_Au_P_MBr_cblm_120k.imzML", params120);
 > statisticalQuality(pk120k$mass, pk30k$mass, 33.33)
-  refSize=9439  testSize=1010     mean=3.293  sigma=3.917  median=1.763  repes:1 (0.1%)
+  refSize=7842  testSize=1013     mean=3.4347  sigma=4.1666  median=1.7812  FP:1 (0.1%)
 ```

@@ -218,8 +218,8 @@ rGetColumnFromFile <- function(file, mass, sample) {
     .Call('_iCone_rGetColumnFromFile', PACKAGE = 'iCone', file, mass, sample)
 }
 
-peakMatrixR <- function(baseDir, params, mzLow, mzHigh, nPixels, nThreads) {
-    .Call('_iCone_peakMatrixR', PACKAGE = 'iCone', baseDir, params, mzLow, mzHigh, nPixels, nThreads)
+peakMatrixR <- function(baseDir, params, mzLow, mzHigh, nPixels) {
+    .Call('_iCone_peakMatrixR', PACKAGE = 'iCone', baseDir, params, mzLow, mzHigh, nPixels)
 }
 
 #'

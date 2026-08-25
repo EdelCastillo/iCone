@@ -194,27 +194,39 @@ int Peak::get(int mzIndexIni, int mzIndexEnd)
         if(!ionOK)
             {
             if(state==DOWN && hitCresta && m_magnitude_p[mzIndexEnd]<=m_magnitude_p[ionCresta]/4)
-                {
-                if(ionIndex) //hay más ionIndexes antes
-                    m_mzIndex_p[ionIndex].low=m_mzIndex_p[ionIndex-1].high;
-                else
-                    m_mzIndex_p[ionIndex].low=indexIni;
-                m_mzIndex_p[ionIndex].high=mzIndexEnd;
-                m_mzIndex_p[ionIndex].max=ionCresta;
-                ionIndex++;
-                }
-            else if(state==T_DOWN && hitCresta && m_magnitude_p[mzIndexEnd]<=m_magnitude_p[ionCresta]/4)
-                {
-                if(ionIndex) //hay más ionIndexes antes
-                    m_mzIndex_p[ionIndex].low=m_mzIndex_p[ionIndex-1].high;
-                else
-                    m_mzIndex_p[ionIndex].low=indexIni;
-                m_mzIndex_p[ionIndex].high=mzIndexEnd;
-                m_mzIndex_p[ionIndex].max=ionCresta;
-                ionIndex++;
-                }
+              {
+              if(ionIndex) //hay más ionIndexes antes
+                  m_mzIndex_p[ionIndex].low=m_mzIndex_p[ionIndex-1].high;
+              else
+                  m_mzIndex_p[ionIndex].low=indexIni;
+              m_mzIndex_p[ionIndex].high=mzIndexEnd;
+              m_mzIndex_p[ionIndex].max=ionCresta;
+              ionIndex++;
             }
-        }
+          //tubo en subida sin cresta y con caida >= resolution
+          else if(state==T_UP && m_magnitude_p[TmaxIon]-m_magnitude_p[mzIndexEnd] >= resolution)
+            {
+            if(ionIndex) //hay más ionIndexes antes (picos unidos)
+              m_mzIndex_p[ionIndex].low=m_mzIndex_p[ionIndex-1].high;
+            else
+              m_mzIndex_p[ionIndex].low=indexIni;
+            m_mzIndex_p[ionIndex].high=mzIndexEnd;
+            m_mzIndex_p[ionIndex].max=TmaxIon;
+            ionIndex++;
+            }
+          
+          else if(state==T_DOWN && hitCresta && m_magnitude_p[mzIndexEnd]<=m_magnitude_p[ionCresta]/4)
+            {
+            if(ionIndex) //hay más ionIndexes antes
+              m_mzIndex_p[ionIndex].low=m_mzIndex_p[ionIndex-1].high;
+            else
+              m_mzIndex_p[ionIndex].low=indexIni;
+            m_mzIndex_p[ionIndex].high=mzIndexEnd;
+            m_mzIndex_p[ionIndex].max=ionCresta;
+            ionIndex++;
+            }
+          }
+      }
 
      //up to here, an ion extends from the end of the previous one to the valley on the right of the next one.
      //Low and high limits are now adjusted when considering noise: an ion is delimited by two nearby valleys

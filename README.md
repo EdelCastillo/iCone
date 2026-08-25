@@ -23,7 +23,7 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
 ### **Step 1**.- A list with the necessary parameters is generated.
 
 > For **example**:  
->**params**\ <-list("tolerance"=33, "minPixelsSupport"=5, "SNR"=3,  "SNRmethod"="estnoise_mad", "linkedPeaks"=3);
+>**params**\ <-list("tolerance"=33, "minPixelsSupport"=5, "SNR"=3,  "SNRmethod"="estnoise_mad");
 
 **Description of the parameters:**
 
@@ -36,7 +36,6 @@ minPixelSupport:    Minimum percentage of pixels that must provide intensity inf
                       estnoise_diff:  Average of the absolute differences with respect to the mean value.
                       estnoise_sd:    Standard deviation of the absolute differences (Gaussian filter).
                       estnoise_mad:   Median of the absolute deviations (Gaussian filter).
-    linkedPeaks:    Two peaks are considered linked if they are closer than the given standard deviation.                         
 ```
 
 ### **Step 2**.- The peak selection algorithm is applied and its peak matrix is obtained:

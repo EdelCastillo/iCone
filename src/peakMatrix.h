@@ -23,7 +23,6 @@
 
 #include "common_methods.h"
 #include "kmeansR.h"
-#include "segments.h"
 #include <stdlib.h>
 #include <fstream>
 
@@ -38,92 +37,67 @@ public:
   //Constructor
   //Generates the peak matrix; final step. It requires the prior contribution of classes RawToGaussians and Segments.
   //   totalPixels: cumulative value of the pixels of each sample analyzed.
-  //massResolution: desired mass resolution.
+  //massResolution: desired mass resolution (mz/delta_mz).
   //         mzLow: lower  mass to consider
   //        mzHigh: higher mass to consider
   //     pxSupport: minimum percentage of pixels that must support an ion for it to be considered.
-  //   massRange_p: array of structures with information on isolated mass segments.
-  //   gaussians_p: array of structures with information about Gaussians.
-  PeakMatrix(int totalPixels, double massResolution, double mzHigh, double mzLow, double pxSupport, MASS_RANGE *massRange_p, GAUSS_SP *gaussians_p, int nThreads);
-  
+  PeakMatrix(int totalPixels, double massResolution, double mzLow, double mzHigh, double pxSupport);
+    
   //destructor
   ~PeakMatrix();
   
   //Loads the file with the coordinates of each pixel
   //If there is more than one sample, all its pixels are integrated
+  //totalPixels: total pixels in the file
   //Returns false if the load failed
   int loadPixelsCoordinates(char *fileName, int totalPixels);
   
-  //mtSegmentation()
-  //Kmeans segmentation in parallel processing.
-  //For each mass segment, centroids are generated.
-  //The information is stored in the array pointed to by m_ionEntry_p.
-  void mtSegmentation(int thrIndex);
-  
-  //massRangeToCentroids()
-  //Parallel processing.
-  //1) Sets the number of independent mass ranges (joined peak).
-  //2) Establishes clusters within those ranges (kmeans segmentation).
-  //Requires preprocessing by getGaussians()
-  //Receives the total mass range to consider.
-  //Returns a list: peakMatrix, massVector, pixelsSupport.
-  //peakMatrix: Matrix of centroids and the intensity associated with each pixel.
-  //massVector: The mz associated with each column of the peakMatrix.
-  //pixelsSupport: Number of pixels with intensity > 0.
-  List massRangeToCentroids(char *baseDir, MASS_RANGE massRange);
+  //Load the file with information about the Gaussian curves associated with each pixel
+  //If there is more than one sample, all its pixels are integrated
+  //fileName: temporary file name (".../tmpGaussians.bin")
+  //Returns false if the load failed
+  int loadGaussians(char *fileName);
   
   //getCentroidsIntoRange()
   //Extracts the existing Gaussians within a mass range from the information in m_gaussians_p.
   //massRange: Mass range from which to extract the Gaussians.
-  //gaussians_p: Requested Gaussians.
-  //Returns the number of Gaussians.
-  int getCentroidsIntoRange(MASS_RANGE massRange, double **gaussians_p, int size);
+  //mass_p: vector of internally generated masses.
+  //px_p: vector of internally generated pixels.
+  //iGauss_p: vector of internally generated gaussians index
+  //massSize: size of reserved memory for each vector.
+  //Returns the number of masses.
+  int getCentroidsIntoRange(double *mass_p, int *px_p, int *iGauss_p, int massSize);
   
-  //setGaussiansNumberIntoSegments()
-  //Determines the maximum number of Gaussians over the given mass intervals and all pixels.
-  //aproximaciones sucesivas
-  //massRange: Mass range to consider.
-  //Returns the maximum value.
-  int setGaussiansNumberIntoSegments (MASS_RANGE massRange); 
+  //Determines the centers of groups of values whose distance does not exceed a given tolerance.
+  //mass_p: vector masses.
+  //px_p: vector of pixels.
+  //iGauss_p: vector gaussians index
+  //tolerance: maximum bin size.
+  //Returns the number of centers detected (length of the centers_p array).
+  int centers(double *mass_p, int *px_p, int *iGauss_p, int size, double tolerance);
   
-  //setGaussiansNumberIntoSegments()
-  //Determines the maximum number of Gaussians over the given mass intervals and all pixels.
-  //brute force.
-  //massRange: Mass range to consider.
-  //Returns the maximum value.
-  int setGaussiansNumberIntoSegments2(MASS_RANGE massRange); 
+  //generate de peak matrix with the centroids, their tolerance, and the number of support pixels.  
+  int getCentroids();
   
-  //getCentroidsNumberIntoRange()
-  //Returns the number of Gaussians in a mass range from the information in m_gaussians_p.
-  //massRange: Mass range from which to extract Gaussians.
-  //Returns the number of Gaussians.
-  int getCentroidsNumberIntoRange(MASS_RANGE massRange);
-  
-  // Determines the centers of groups of values whose distance does not exceed segmentSize.
-  // mass_p: array of data to consider.
-  // size: size of the mass_p array.
-  // Centers_p: array of final centers.
-  // centerSize_p: number of elements that make up each center.
-  // Returns the number of centers detected (length of the centers_p array).
-  int centers(double *mass_p, int size, double segmentSize, double* centers_p, int *centerSize_p);
-  
-  ION_ENTRY     **m_ionEntry_p;
-  MASS_RANGE    *m_massRange_p;
-  MASS_SEGMENT  m_massSegment;
-  GAUSS_SP      *m_gaussians_p;
-  bool          m_enable;
-  int           m_nThreads,
-                m_massRangeSize,
-                m_totalPixels,
-                m_totalIons[MAX_THREADS],
-                m_pxSupport;
-  std::thread  *m_thread_p[MAX_THREADS];                //thread that processes the spectrum.
+  //Save the peak matrix to the file ".../tmpPeakMatrix.bin"
+  int infoToFile(char *baseDir);
 
-  double         m_massResolution, 
-                m_mzHigh, 
-                m_mzLow; 
+  double *m_centers_p;
+  int    *m_centersSize_p;
+  int     m_nCentroids;
+  
+  int   m_totalPixels,
+  m_nIons,
+  m_nSamples;
+  double m_massResolution, 
+  m_mzHigh, 
+  m_mzLow, 
+  m_pxSupport,
+  m_linkedPeaks;
+  GAUSS_SP      *m_gaussians_p;
+  MASS_RANGE    *m_massRange_p;
+  ION_ENTRY     m_ionEntry;
+  int           m_pixelsSample[MAX_SAMPLES];
   PIXEL_XY      *m_pixelsCoordinates_p;
-  int           m_pixelsSample[MAX_SAMPLES],
-                m_nSamples;
 };
 #endif

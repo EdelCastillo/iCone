@@ -19,8 +19,7 @@ getPeakMatrix(
 \item{params}{"tolerance": desired tolerance for the centroids (ppm)
 "SNR": signal-to-noise ratio (by defect=1)
 "noiseMethod": method for estimating noise (by defect="estnoise_mad").
-"minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered (by defect=1).
-"linkedPeaks": two peaks are considered linked if they are closer than the given standard deviation (by defect=3).}
+"minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered (by defect=1).}
 
 \item{data_file:}{A list of the absolute paths of the files to be processed is required.
 Alternatively, a single filename with the 'txt' extension containing the absolute paths of all files to be processed is acceptable.

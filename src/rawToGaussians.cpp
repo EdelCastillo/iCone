@@ -19,8 +19,8 @@
 #include "rawToGaussians.h"
 #include <cstdlib>
 
- extern int gProcSegments, gVez; //observers.
- extern std::mutex gMutex;
+ int  gProcSegments, gVez; //observers.
+ std::mutex gMutex;
  int  gPeakCount, gSpectra, gError;
  double gMinMass, gMaxMass;
 
@@ -401,10 +401,6 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
    String tmpStr=cv[0];
    const char* SNRmethod=tmpStr.get_cstring(); //conversion C
    
-   //Two peaks are considered linked if they are closer than the given standard deviation.
-   nv=params["linkedPeaks"]; 
-   m_linkedPeaks=nv[0];
-   
    if     (strcmp(SNRmethod, "estnoise_diff")==0) {m_SNRmethod=1; }
    else if(strcmp(SNRmethod, "estnoise_sd")  ==0) {m_SNRmethod=2; }
    else if(strcmp(SNRmethod, "estnoise_mad") ==0) {m_SNRmethod=3; }
@@ -647,7 +643,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
    mRange.high=m_mzHigh;
    
    printf("100\n");
-   
+
    //thread removal
    m_enable=false; //threads end.
    for(int thr=0; thr<m_nThreads; thr++) //are unlocked for the conclusion.
@@ -714,7 +710,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
      spSize_tmp=spSize;
      //SNR
      m_spectro[spIndex].noise=m_noiseEst_p->getSNR(m_spectro[spIndex].tmpInt_p, m_spectro[spIndex].size,  m_spectro[spIndex].tmpSNR_p);
-     
+
      //the spectrum is limited to the range of interest.
      iMzLow =common.nearestIndex(m_mzLow,  m_spectro[spIndex].tmpMass_p, spSize); //low index
      iMzHigh=common.nearestIndex(m_mzHigh, m_spectro[spIndex].tmpMass_p, spSize); //high index
@@ -740,7 +736,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
      m_spectro[spIndex].size=spSize; //useful range
      //-----------------------------------------------------------------    
      //conversion to Gaussians.
-     
+
      if(!m_enable) //end of thread?
      {m_spectro[spIndex].mutexOut_p->unlock(); return 0;}
      int nPeak;
@@ -819,10 +815,8 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
            }
            m_gaussians_p[px].size=nGaussians;
          }
-         
        }
      else {m_gaussians_p[px].size=0;}
-       
      } //end of peak processing
      
      if(gaussians_p)     {delete [] gaussians_p;       gaussians_p=0;}

@@ -291,8 +291,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // peakMatrixR
-List peakMatrixR(Rcpp::String baseDir, Rcpp::List params, double mzLow, double mzHigh, int nPixels, int nThreads);
-RcppExport SEXP _iCone_peakMatrixR(SEXP baseDirSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP nPixelsSEXP, SEXP nThreadsSEXP) {
+List peakMatrixR(Rcpp::String baseDir, Rcpp::List params, double mzLow, double mzHigh, int nPixels);
+RcppExport SEXP _iCone_peakMatrixR(SEXP baseDirSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP nPixelsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -301,8 +301,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
     Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
     Rcpp::traits::input_parameter< int >::type nPixels(nPixelsSEXP);
-    Rcpp::traits::input_parameter< int >::type nThreads(nThreadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(peakMatrixR(baseDir, params, mzLow, mzHigh, nPixels, nThreads));
+    rcpp_result_gen = Rcpp::wrap(peakMatrixR(baseDir, params, mzLow, mzHigh, nPixels));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -430,7 +429,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_iCone_rGetMassVectorFromFile", (DL_FUNC) &_iCone_rGetMassVectorFromFile, 1},
     {"_iCone_rGetIntensityFromFile", (DL_FUNC) &_iCone_rGetIntensityFromFile, 2},
     {"_iCone_rGetColumnFromFile", (DL_FUNC) &_iCone_rGetColumnFromFile, 3},
-    {"_iCone_peakMatrixR", (DL_FUNC) &_iCone_peakMatrixR, 6},
+    {"_iCone_peakMatrixR", (DL_FUNC) &_iCone_peakMatrixR, 5},
     {"_iCone_rawToGaussiansR", (DL_FUNC) &_iCone_rawToGaussiansR, 8},
     {"_iCone_rGetBasicInfo", (DL_FUNC) &_iCone_rGetBasicInfo, 3},
     {"_iCone_rGetAverageGaussianSpectrum", (DL_FUNC) &_iCone_rGetAverageGaussianSpectrum, 8},

@@ -29,7 +29,6 @@
 #'                 "SNR": signal-to-noise ratio (by defect=1)
 #'         "noiseMethod": method for estimating noise (by defect="estnoise_mad").
 #'    "minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered (by defect=1).
-#'         "linkedPeaks": two peaks are considered linked if they are closer than the given standard deviation (by defect=3).   
 #' @param initMass:  Initial  mass to consider. By default, the minimum value from the entire range of masses is used.
 #' @param finalMass: Final    mass to consider. By default, the maximum value from the entire range of masses is used.
 #' @param pxList:    List of pixels. First pixel=1. By default everyone.
@@ -76,11 +75,6 @@ getPeakMatrix<-function(data_file,
   {
     cat("warning: by default, noiseMethod parameter will be MAD type.\n")
     params=c(params, "noiseMethod"="estnoise_mad")
-  }
-  if(!(exists("linkedPeaks", where=params)))
-  {
-    cat("warning: by default, linkedPeaks parameter will be 3 sd.\n") 
-    params=c(params, "linkedPeaks"=3)
   }
   if(!(exists("tolerance", where=params)))
   {
@@ -138,6 +132,11 @@ getPeakMatrix<-function(data_file,
     }
   }
   
+  if(nThreads>100)
+    {
+    cat("warning: max threads are 100\n")
+    nThreads=100;
+    }
   
   nSamples=length(samples);
   if(nSamples<=0)
@@ -145,10 +144,10 @@ getPeakMatrix<-function(data_file,
     cat("warning: there is no valid file.\n")
     return(0);
   }
-  else if(nSamples>50)
+  else if(nSamples>150)
   {
-    cat("Warning: the maximum number of samples allowed has been reached. It is limited to 50.\n)");
-    nSamples=50;
+    cat("Warning: the maximum number of samples allowed has been reached. It is limited to 150.\n)");
+    nSamples=150;
   }
   
   baseDir=rGetDirectory(data_file[1])
@@ -259,10 +258,10 @@ getPeakMatrix<-function(data_file,
   gc()
   fileA=paste0(baseDir, "tmpMassRange.bin")
   massRange=rLoadMassRange(fileA); #mass range to file
-  
+
   #step 2 and 3 (gaussians to centroids). Peak matrix to file tmpPeakMatrix.bin
-  peakMatrix=peakMatrixR(baseDir, params, massRange[1], massRange[2], nPixels, nThreads);
-#  return(0)
+  ret=peakMatrixR(baseDir, params, massRange[1], massRange[2], nPixels);
+
   gc() 
   
   #The peak array is captured in pkMatrix object from the tmpPeakMatrix.bin file.
@@ -272,13 +271,12 @@ getPeakMatrix<-function(data_file,
   mass=vector(length = metaInfo$nIons)
   tolerance=vector(length = metaInfo$nIons)
   pxSupport=vector(length = metaInfo$nIons)
-#cat(sprintf("... %d %d %d\n", metaInfo$nIons, metaInfo$totalPx, metaInfo$pixelsSample))
+  
   #load ion by ion (This reduces the memory required)
   for(ion in 1:metaInfo$nIons)
   {
     tmpIon=rGetIntensityFromFile(fileA, ion)
     mass[ion]=tmpIon[1];
-#print(mass[ion])
     tolerance[ion]=tmpIon[2];
     pxSupport[ion]=tmpIon[3];
     pkMatrix[,ion]=tmpIon[4:length(tmpIon)]
@@ -482,7 +480,12 @@ getAverageGaussianSpectrum<-function(data_file,
     cat("ERROR: tolerance must be greater than zero.\n") 
     return (0)
   }
-
+  if(nThreads>100)
+  {
+    cat("warning: max threads are 100\n")
+    nThreads=100;
+  }
+  
   imgData <- NULL
   
   pt<-proc.time()

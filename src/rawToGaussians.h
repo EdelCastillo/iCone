@@ -123,7 +123,6 @@ public:
   m_maxPxGaussians,
   m_massRangeSize,
   m_NPixels;
-  double   m_linkedPeaks; //Two peaks are considered linked if they are closer than the given standard deviation.
   double     
     m_massResolution;
   bool     m_hit;

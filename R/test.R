@@ -1,43 +1,53 @@
 
 
-# statisticalQuality()
-# Determines the deviation of the mzTest vector from the mzRef vector
-# Returns statistical values of the deviations
-# Resolution is used to identify repeated masses (sharing a reference mass)
-# mzRef and mzTest are derived from getPeakMatrix()
+# statisticalQuality() 
+# It reports statistical values regarding the deviation between the two m/z vectors being compared. 
+# This deviation is determined from the nearest centroids in the high-resolution sample to those in the low-resolution sample.
+# arguments: 
+# mzRef      is the high-resolution centroid vector.
+# mzTest     is the low-resolution centroid vector.
+# tolerance  indicates the minimum distance for the result to be considered a false positive (expressed in ppm).
+
+# report: 
+# refSize    size of the high-resolution centroid vector.
+# testSize   size of the low-resolution centroid vector.
+# mean       mean of the deviations between centroids.
+# sigma      standard deviation of the deviations between centroids.
+# median     median of the deviations between centroids.
+# FP         False Positive: number of low-resolution centroids with a deviation exceeding 1.5 times the tolerance relative to the nearest high-resolution centroid.
 #' @export
-statisticalQuality<-function(mzRef, mzTest, resolution)
+statisticalQuality<-function(mzRef, mzTest, tolerance)
 {
   txt1=sprintf("refSize=%d  testSize=%d\n", length(mzRef), length(mzTest))
   cat(txt1)
   
-  Mx=fitQuality(mzRef, mzTest, resolution)
+  Mx=fitQuality(mzRef, mzTest, tolerance)
   v1=Mx[,3]
-  logic=Mx[,4]==0
-  v2=v1[logic]
+  logic=Mx[,4]<2 
+  v2=v1[logic] #good data
   
   m=mean(v1)
   sigma=sd(v1)
   md=median(v1)
-  logic=Mx[,5]==1
-  repes=length((Mx[,5])[logic])
+  logic=Mx[,4]==2
+  FP=length((Mx[,4])[logic])
   
-  txt2=sprintf("mean=%9.4f  sigma=%9.4f  median=%9.4f  repes:%.0f (%.1f%%)\n", m, sigma, md, repes, 100*repes/length(mzTest));
+  txt2=sprintf("mean=%9.4f  sigma=%9.4f  median=%9.4f  FP:%.0f (%.1f%%)\n", m, sigma, md, FP, 100*FP/length(mzTest));
   cat("        All data:", txt2)
 
   m=mean(v2)
   sigma=sd(v2)
   md=median(v2)
-  logic=Mx[,5]==1
-  repes=length((Mx[,5])[logic])
+  logic=Mx[,4]==2
+  FP=length((Mx[,4])[logic])
   
-  txt2=sprintf("mean=%9.4f  sigma=%9.4f  median=%9.4f  repes:%.0f (%.1f%%)\n", m, sigma, md, repes, 100*repes/length(mzTest));
+  txt2=sprintf("mean=%9.4f  sigma=%9.4f  median=%9.4f  FP:%.0f (%.1f%%)\n", m, sigma, md, FP, 100*FP/length(mzTest));
   cat("Without bad data:", txt2)
   return(Mx)
 }
 
 # fitQuality()
-fitQuality<-function(refCentroids, testCentroids, referenceMassResolution, histo=FALSE)
+fitQuality<-function(refCentroids, testCentroids, tolerance, histo=FALSE)
 {
   fail<-matrix(nrow=2, ncol=5);
   testLength=length(testCentroids);
@@ -53,7 +63,7 @@ fitQuality<-function(refCentroids, testCentroids, referenceMassResolution, histo
   for(iPk in 1:testLength) #para cada pico del test
   {
     offset=0;
-    testPPM=referenceMassResolution;
+    testPPM=tolerance;
      testMass=testCentroids[iPk];
 
     retMass<-nearestValue(testMass, refCentroids);
