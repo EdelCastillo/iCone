@@ -4,50 +4,30 @@
 \alias{getPeakMatrix}
 \title{obtains the peak matrix from imzML files.}
 \usage{
-getPeakMatrix(
-  data_file,
-  params,
-  initMass = 0,
-  finalMass = 0,
-  pxList = c(0),
-  nThreads = 0,
-  imzMLChecksum = F,
-  fixBrokenUUID = F
-)
+getPeakMatrix(dataFiles, outDirectory, params)
 }
 \arguments{
 \item{params}{"tolerance": desired tolerance for the centroids (ppm)
 "SNR": signal-to-noise ratio (by defect=1)
 "noiseMethod": method for estimating noise (by defect="estnoise_mad").
-"minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered (by defect=1).}
+"minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered (by defect=1).
+initMass: initial mass to consider. By default, the minimum value from the entire range of masses is used.
+finalMass: final   mass to consider. By default, the maximum value from the entire range of masses is used.
+pxList: list of pixels. First pixel=1. By default everyone.
+nThreads: number of threads for parallel processing (by default maxCores-1)
+imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
+fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).}
 
-\item{data_file:}{A list of the absolute paths of the files to be processed is required.
+\item{dataFiles:}{A list of the absolute paths of the files to be processed is required.
 Alternatively, a single filename with the 'txt' extension containing the absolute paths of all files to be processed is acceptable.
 In file.txt, lines are considered comments if they begin with the '#' character or the blank character.
 Only files in 'imzML' format are recognized.
 The attached binary file, with the 'ibd' extension, must be in the same directory that 'imzML' files.}
 
-\item{initMass:}{Initial  mass to consider. By default, the minimum value from the entire range of masses is used.}
-
-\item{finalMass:}{Final    mass to consider. By default, the maximum value from the entire range of masses is used.}
-
-\item{pxList:}{List of pixels. First pixel=1. By default everyone.}
-
-\item{nThreads:}{Number of threads for parallel processing (by default maxCores-1)}
-
-\item{imzMLChecksum:}{if the binary file checksum must be verified, it can be disabled for convenice with really big files.}
-
-\item{fixBrokenUUID:}{set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).}
+\item{outDirectory:}{Absolute path to the directory where the support files will be created.}
 }
 \value{
-a list:
-peakMatrix: Matrix of peak (centroids) rows = pixels, columns = intensity of each pixel.
-mass: Vector with the masses associated with each column of peakMatrix.
-tolerance: desired tolerance for the centroids (ppm)
-pixelsSupport: Vector with the number of pixels in each column with non-zero intensity.
-coordinates: Matrix with pixel coordinates (X/Y).
-pixelsSample: Vector with the number of pixels in each of the samples. In the peakMatrix and coordinates they appear in the same order.
-pixelSize_um: Vector with the size of the pixels (spatial resolution) in micrometers.
+a list with the input parameters
 }
 \description{
 obtains the peak matrix from imzML files.

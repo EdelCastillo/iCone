@@ -5,32 +5,18 @@
 \alias{getPixelGaussians}
 \title{It retrieves information from a single pixel.}
 \usage{
-getPixelGaussians(
-  data_file,
-  params = c(),
-  initMass = 0,
-  finalMass = 0,
-  pixel = 1,
-  imzMLChecksum = F,
-  fixBrokenUUID = F
-)
+getPixelGaussians(dataFile, params, pixel = 1)
 }
 \arguments{
-\item{params}{"tolerance": desired tolerance for the centroids (ppm)
-"SNR": signal-to-noise ratio
-"noiseMethod": method for estimating noise.}
+\item{params}{"SNR": signal-to-noise ratio
+"noiseMethod": method for estimating noise.
+initMass: initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+finalMass: final    mass to consider. By default, the maximum value from the entire range of masses is used.
+pixel: spectrum to evaluate. First pixel=1
+imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
+fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).}
 
-\item{data_file:}{absolute reference to the file with the imzML extension.}
-
-\item{initMass:}{Initial  mass to consider. By default, the minimum value from the entire range of masses is used.}
-
-\item{finalMass:}{Final    mass to consider. By default, the maximum value from the entire range of masses is used.}
-
-\item{pixel:}{spectrum to evaluate. First pixel=1}
-
-\item{imzMLChecksum:}{if the binary file checksum must be verified, it can be disabled for convenice with really big files.}
-
-\item{fixBrokenUUID:}{set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).}
+\item{dataFiles:}{absolute reference to the file with the imzML extension.}
 }
 \value{
 a list:

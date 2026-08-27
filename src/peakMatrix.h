@@ -22,7 +22,6 @@
 #include <Rcpp.h>
 
 #include "common_methods.h"
-#include "kmeansR.h"
 #include <stdlib.h>
 #include <fstream>
 
@@ -41,7 +40,7 @@ public:
   //         mzLow: lower  mass to consider
   //        mzHigh: higher mass to consider
   //     pxSupport: minimum percentage of pixels that must support an ion for it to be considered.
-  PeakMatrix(int totalPixels, double massResolution, double mzLow, double mzHigh, double pxSupport);
+  PeakMatrix(int totalPixels, double massResolution, double mzLow, double mzHigh, double pxSupport, int nSamples, char *baseDir);
     
   //destructor
   ~PeakMatrix();
@@ -81,7 +80,9 @@ public:
   
   //Save the peak matrix to the file ".../tmpPeakMatrix.bin"
   int infoToFile(char *baseDir);
-
+  
+  int getSamplesPixelNumber();
+    
   double *m_centers_p;
   int    *m_centersSize_p;
   int     m_nCentroids;
@@ -99,5 +100,6 @@ public:
   ION_ENTRY     m_ionEntry;
   int           m_pixelsSample[MAX_SAMPLES];
   PIXEL_XY      *m_pixelsCoordinates_p;
+  char *        m_baseDir;
 };
 #endif

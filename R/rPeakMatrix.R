@@ -16,46 +16,50 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #********************************************************************************/
  
-
 #' @name getPeakMatrix
 #' @title obtains the peak matrix from imzML files.
-#' @param data_file: A list of the absolute paths of the files to be processed is required. 
+#' @param dataFiles: A list of the absolute paths of the files to be processed is required. 
 #'                   Alternatively, a single filename with the 'txt' extension containing the absolute paths of all files to be processed is acceptable. 
 #'                   In file.txt, lines are considered comments if they begin with the '#' character or the blank character.
 #'                   Only files in 'imzML' format are recognized.
 #'                   The attached binary file, with the 'ibd' extension, must be in the same directory that 'imzML' files.
+#' @param outDirectory: Absolute path to the directory where the support files will be created.     
 #' @param params  
 #'           "tolerance": desired tolerance for the centroids (ppm)
 #'                 "SNR": signal-to-noise ratio (by defect=1)
 #'         "noiseMethod": method for estimating noise (by defect="estnoise_mad").
 #'    "minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered (by defect=1).
-#' @param initMass:  Initial  mass to consider. By default, the minimum value from the entire range of masses is used.
-#' @param finalMass: Final    mass to consider. By default, the maximum value from the entire range of masses is used.
-#' @param pxList:    List of pixels. First pixel=1. By default everyone.
-#' @param nThreads:  Number of threads for parallel processing (by default maxCores-1)
-#' @param imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
-#' @param fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
+#'              initMass: initial mass to consider. By default, the minimum value from the entire range of masses is used.
+#'             finalMass: final   mass to consider. By default, the maximum value from the entire range of masses is used.
+#'                pxList: list of pixels. First pixel=1. By default everyone.
+#'              nThreads: number of threads for parallel processing (by default maxCores-1)
+#'         imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
+#'         fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 #'
-#' @return a list: 
-#'     peakMatrix: Matrix of peak (centroids) rows = pixels, columns = intensity of each pixel.
-#'           mass: Vector with the masses associated with each column of peakMatrix.
-#'      tolerance: desired tolerance for the centroids (ppm)
-#'  pixelsSupport: Vector with the number of pixels in each column with non-zero intensity. 
-#'    coordinates: Matrix with pixel coordinates (X/Y).
-#'   pixelsSample: Vector with the number of pixels in each of the samples. In the peakMatrix and coordinates they appear in the same order.
-#'   pixelSize_um: Vector with the size of the pixels (spatial resolution) in micrometers.
-#'
+#' @return a list with the input parameters 
+#' 
 #' @export
-getPeakMatrix<-function(data_file,
-                   params,
-                   initMass=0,
-                   finalMass=0,
-                   pxList=c(0),
-                   nThreads=0,
-                   imzMLChecksum = F, 
-                   fixBrokenUUID = F)
+getPeakMatrix<-function(dataFiles, outDirectory, params)
 {
-  if(length(data_file)==0)
+  if(missing(dataFiles))
+  {
+    cat("Error: dataFiles parameter is required\n")
+    return(0)
+  }
+  inBaseDir=rGetDirectory(dataFiles[1])
+  
+  if(missing(outDirectory))
+  {
+    outBaseDir=inBaseDir
+  }
+  if(missing(params))
+  {
+    params=list("SNR"=3, "tolerance"=16, "minPixelsSupport"=5, "noiseMethod"="estnoise_mad", "initMass"=0, "finalMass"=0,
+                "pxList"=c(), "nThreads"=0, "imzMLChecksum"=F, "fixBrokenUUID"=F)
+            
+  }
+  
+  if(length(dataFiles)==0)
   {
     stop("No information is provided about the files to be processed.\n")
   }
@@ -63,13 +67,13 @@ getPeakMatrix<-function(data_file,
   #parameters control 
   if(!(exists("SNR", where=params)))
   {
-    cat("warning: by default, SNR parameter will be 1.\n")
-    params=c(params, "SNR"=1)
+    cat("warning: by default, SNR parameter will be 3.\n")
+    params=c(params, "SNR"=3)
   }
   if(!(exists("minPixelsSupport", where=params)))
   {
-    cat("warning: by default, minPixelsSupport parameter will be 1%.\n")
-    params=c(params, "minPixelsSupport"=1)
+    cat("warning: by default, minPixelsSupport parameter will be 5%.\n")
+    params=c(params, "minPixelsSupport"=5)
   }
   if(!(exists("noiseMethod", where=params)))
   {
@@ -86,7 +90,24 @@ getPeakMatrix<-function(data_file,
     cat("ERROR: tolerance must be greater than zero.\n") 
     return (0)
   }
-
+  if(!(exists("initMass", where=params)))
+    params=c(params, "initMass"=0)
+  
+  if(!(exists("finalMass", where=params)))
+    params=c(params, "finalMass"=0)
+  
+  if(!(exists("pxList", where=params)))
+    params=c(params, "pxList"=c(0))
+  
+  if(!(exists("nThreads", where=params)))
+    params=c(params, "nThreads"=0)
+  
+  if(!(exists("imzMLChecksum", where=params)))
+    params=c(params, "imzMLChecksum"=F)
+  
+  if(!(exists("fixBrokenUUID", where=params)))
+    params=c(params, "fixBrokenUUID"=F)
+  
   imgData <- NULL
   pt<-proc.time()
   
@@ -95,13 +116,13 @@ getPeakMatrix<-function(data_file,
   samples=c();
   tmpFile=c();
   
-  if(length(data_file)==1)
+  if(length(dataFiles)==1)
   {
-    fileExtension <- unlist(strsplit(basename(data_file[1]), split = "\\."))
+    fileExtension <- unlist(strsplit(basename(dataFiles[1]), split = "\\."))
     fileExtension <- as.character(fileExtension[length(fileExtension)])
     if( fileExtension == "txt")
       {  
-      fileCon <- file(data_file[1], open="r") # We opened the connection.
+      fileCon <- file(dataFiles[1], open="r") # We opened the connection.
       
       tmpFile <- readLines(fileCon) #The file names are loaded line by line.
       for(i in 1:length(tmpFile))
@@ -121,16 +142,22 @@ getPeakMatrix<-function(data_file,
       }
     else
     {
-      samples=data_file[1]; #unique sample.
+      samples=dataFiles[1]; #unique sample.
     }
   }
-  else if(length(data_file)>1)
+  else if(length(dataFiles)>1) #a list with files name is given
   {
-    for(i in 1:length(data_file))
+    for(i in 1:length(dataFiles))
     {
-    samples=c(samples, data_file[i]);
+    samples=c(samples, dataFiles[i]);
     }
   }
+  
+  initMass=params$initMass
+  finalMass=params$finalMass
+  nThreads=params$nThreads
+  imzMLChecksum=params$imzMLChecksum
+  fixBrokenUUID=params$fixBrokenUUID
   
   if(nThreads>100)
     {
@@ -150,17 +177,18 @@ getPeakMatrix<-function(data_file,
     nSamples=150;
   }
   
-  baseDir=rGetDirectory(data_file[1])
+  z=unlist(strsplit(basename(samples[1]), split = "\\."))[1]
+  baseName= paste0(outBaseDir, z)
   
-  fileExtension <- unlist(strsplit(basename(data_file[1]), split = "\\."))
+  fileExtension <- unlist(strsplit(basename(dataFiles[1]), split = "\\."))
   fileExtension <- as.character(fileExtension[length(fileExtension)])
   if( fileExtension != "bin")
   {
     #Deletion of temporary files, if any. 
     #These files should not contain any content since they are cumulative.
-    fileA=paste0(baseDir, "tmpGaussians.bin")
+    fileA=paste0(baseName, "_gaussians.bin")
     if(file.exists(fileA)) file.remove(fileA)
-    fileB=paste0(baseDir, "tmpPixelsCoordinates.bin")
+    fileB=paste0(baseName, "_pixelsCoord.bin")
     if(file.exists(fileB)) file.remove(fileB)
   }
   
@@ -171,6 +199,9 @@ getPeakMatrix<-function(data_file,
   totalSamples=0
   pixelSize=c()
   hit=FALSE;
+  
+  saveContext(samples, outBaseDir, params);
+  
   
   for( sample in 1 : nSamples)
     {
@@ -201,7 +232,7 @@ getPeakMatrix<-function(data_file,
       }
       pixelSize=c(pixelSize, in_img$pixel_size_um)
       
-      basicInfo=rGetBasicInfo(file, in_img$data$imzML, pxList-1)
+      basicInfo=rGetRawBasic(file, in_img$data$imzML, params$pxList-1)
       if(initMass ==0 || initMass<basicInfo$minMz  || initMass>basicInfo$maxMz)   {lowMz =basicInfo$minMz;}
       else {lowMz=initMass}
       if(finalMass==0 || finalMass>basicInfo$maxMz || finalMass<basicInfo$minMz)  {highMz=basicInfo$maxMz;}
@@ -215,21 +246,21 @@ getPeakMatrix<-function(data_file,
         return(0)
       }
      #imzML file to Gaussians (for each sample).
-     nPixels=rawToGaussiansR(baseDir, file, in_img$data$imzML, params, lowMz, highMz, pxList-1, nThreads);
+     nPixels=rawToGaussiansR(baseName, file, in_img$data$imzML, params, lowMz, highMz, params$pxList-1, nThreads);
      
      totalPixels=totalPixels+nPixels;
      totalSamples=totalSamples+1;
      hit=TRUE;
      
-     fileA=paste0(baseDir, "tmpMassRange.bin")
-     rSaveMassRange(fileA, minMass, maxMass); #save the temporary file with the peaks converted to Gaussians.
+     fileA=paste0(baseName, "_massRange.bin")
+     rSaveMassRange(fileA, minMass, maxMass, pixelSize); #save the temporary file with the peaks converted to Gaussians.
      
      gc();
      rm(in_img, basicInfo)
     }
   else if (fileExtension == "bin") #allows execution to continue at step 2 (Gaussians to centroids)
     {
-    fileA=paste0(baseDir, "tmpGaussians.bin")
+    fileA=paste0(baseName, "_gaussians.bin")
     cat(sprintf("The information contained in the %s file will be used.\nThis eliminates phase 1 of the processing.\n", fileA))
     hit=TRUE;
     totalSamples=1;
@@ -254,58 +285,34 @@ getPeakMatrix<-function(data_file,
   }
   if(!hit) return(0);
   
-  #rm(list = ls())
   gc()
-  fileA=paste0(baseDir, "tmpMassRange.bin")
+  fileA=paste0(baseName, "_massRange.bin")
   massRange=rLoadMassRange(fileA); #mass range to file
 
-  #step 2 and 3 (gaussians to centroids). Peak matrix to file tmpPeakMatrix.bin
-  ret=peakMatrixR(baseDir, params, massRange[1], massRange[2], nPixels);
-
+  #step 2 and 3 (gaussians to centroids). Peak matrix to file _peakMatrix.bin
+  ret=peakMatrixR(baseName, params, massRange[1], massRange[2], totalPixels, totalSamples);
   gc() 
   
-  #The peak array is captured in pkMatrix object from the tmpPeakMatrix.bin file.
-  fileA=paste0(baseDir, "tmpPeakMatrix.bin")
-  metaInfo=rGetMetaDataFromFile(fileA) #generic information from peak matrix
-  pkMatrix=matrix(ncol=metaInfo$nIons, nrow=metaInfo$totalPx);
-  mass=vector(length = metaInfo$nIons)
-  tolerance=vector(length = metaInfo$nIons)
-  pxSupport=vector(length = metaInfo$nIons)
+  data=list("dataFiles"=dataFiles, "outDirectory"=outBaseDir, "params"=params)
   
-  #load ion by ion (This reduces the memory required)
-  for(ion in 1:metaInfo$nIons)
-  {
-    tmpIon=rGetIntensityFromFile(fileA, ion)
-    mass[ion]=tmpIon[1];
-    tolerance[ion]=tmpIon[2];
-    pxSupport[ion]=tmpIon[3];
-    pkMatrix[,ion]=tmpIon[4:length(tmpIon)]
-  }
-  
-  fileA=paste0(baseDir, "tmpPixelsCoordinates.bin") 
-  coordinates=rGetCoordinatesFromFile(fileA, 0); #load coordinates for all samples
-  peakMatrix <- list("peakMatrix" = pkMatrix, "mass" = mass, "tolerance" = tolerance,
-                   "pixelsSupport"=pxSupport, "coordinates"=coordinates, 
-                   "pixelsSample"=metaInfo$pixelsSample, "pixelSize_um"=pixelSize)  
   pt<-proc.time() - pt
   display_processing_time(pt, "Data processing time")
-  return(peakMatrix)
+  return (data)
 }
 
 #//////////////////////////////////////////////////////////////
 
 #' @name getPxGaussians
 #' @title It retrieves information from a single pixel.
-#' @param data_file: absolute reference to the file with the imzML extension.
+#' @param dataFiles: absolute reference to the file with the imzML extension.
 #' @param params  
-#'           "tolerance": desired tolerance for the centroids (ppm)
-#'                 "SNR": signal-to-noise ratio
-#'         "noiseMethod": method for estimating noise.
-#' @param initMass:  Initial  mass to consider. By default, the minimum value from the entire range of masses is used.
-#' @param finalMass: Final    mass to consider. By default, the maximum value from the entire range of masses is used.
-#' @param pixel:    spectrum to evaluate. First pixel=1
-#' @param imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
-#' @param fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
+#'              "SNR": signal-to-noise ratio
+#'      "noiseMethod": method for estimating noise.
+#'           initMass: initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+#'          finalMass: final    mass to consider. By default, the maximum value from the entire range of masses is used.
+#'              pixel: spectrum to evaluate. First pixel=1
+#'      imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
+#'      fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 #'
 #' @return a list: 
 #'    gaussians: parameters of each Gaussian.
@@ -314,63 +321,64 @@ getPeakMatrix<-function(data_file,
 #'          SNR: signal-to-noise ratio for each point of mass.
 #'        noise: noise estimation.
 #' @export
-getPixelGaussians<-function(data_file,
-                        params=c(),
-                        initMass=0,
-                        finalMass=0,
-                        pixel=1,
-                        imzMLChecksum = F, 
-                        fixBrokenUUID = F)
+getPixelGaussians<-function(dataFile, params, pixel=1)
 {
-  if(!file.exists(data_file))
+  if(!file.exists(dataFile))
   {
     stop("File not found\n")
   }
-  if(length(params)==0)
+  if(missing(params))
   {
-    params=list("SNR"=1, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "linkedPeaks"=3, "tolerance"=33)
-    cat("defect parameters: SNR=1, noiseMethod=estnoise_mad, minPixelsSupport=1, linkedPeaks=3, tolerance=33\n")
+    params=list("SNR"=3, "noiseMethod"="estnoise_mad", "initMass"=0, "finalMass"=0,
+                "imzMLChecksum"=F, "fixBrokenUUID"=F)
+    cat("defect parameters: SNR=3, noiseMethod=estnoise_mad\n")
+    
   }
   else
   {
-    #control de parámetros
+    #parameters control 
     if(!(exists("SNR", where=params)))
     {
-      cat("warning: by default, SNR parameter will be 1.\n")
-      params=c(params, "SNR"=1)
-    }
-    if(!(exists("minPixelsSupport", where=params)))
-    {
-      cat("warning: by default, minPixelsSupport parameter will be 1%.\n")
-      params=c(params, "minPixelsSupport"=1)
+      cat("warning: by default, SNR parameter will be 3.\n")
+      params=c(params, "SNR"=3)
     }
     if(!(exists("noiseMethod", where=params)))
     {
-      cat("warning: by default, noiseMethod will be MAD type.\n")
+      cat("warning: by default, noiseMethod parameter will be MAD type.\n")
       params=c(params, "noiseMethod"="estnoise_mad")
     }
-    if(!(exists("tolerance", where=params)))
-    {
-      cat("ERROR: tolerance parameter is required.\n") 
-      return (0)
-    }
-    if(params$tolerance<=0)
-    {
-      cat("ERROR: tolerance must be greater than zero.\n") 
-      return (0)
-    }
+    if(!(exists("initMass", where=params)))
+      params=c(params, "initMass"=0)
+    
+    if(!(exists("finalMass", where=params)))
+      params=c(params, "finalMass"=0)
+    
+    if(!(exists("pxList", where=params)))
+      params=c(params, "pxList"=c(0))
+    
+    if(!(exists("imzMLChecksum", where=params)))
+      params=c(params, "imzMLChecksum"=F)
+    
+    if(!(exists("fixBrokenUUID", where=params)))
+      params=c(params, "fixBrokenUUID"=F)
+    
   }
+  initMass=params$initMass
+  finalMass=params$finalMass
+  nThreads=params$nThreads
+  imzMLChecksum=params$imzMLChecksum
+  fixBrokenUUID=params$fixBrokenUUID
+  
   imgData <- NULL
   
-
   pt<-proc.time()
   
-  fileExtension <- unlist(strsplit(basename(data_file), split = "\\."))
+  fileExtension <- unlist(strsplit(basename(dataFile), split = "\\."))
   fileExtension <- as.character(fileExtension[length(fileExtension)])
   if( fileExtension == "imzML")
   {
     #capturing information from an imzML file.
-    in_img <- import_imzML(path.expand(data_file),  fun_progress = NULL, fun_text = NULL, 
+    in_img <- import_imzML(path.expand(dataFile),  fun_progress = NULL, fun_text = NULL, 
                            close_signal = NULL, verifyChecksum = imzMLChecksum, subImg_rename = NULL, 
                            subImg_Coords = NULL, fixBrokenUUID = fixBrokenUUID)
     
@@ -378,7 +386,7 @@ getPixelGaussians<-function(data_file,
     file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
     
     #dimensioned (lowMz, highMz)
-    basicInfo=rGetBasicInfo(file, in_img$data$imzML, pixel-1)
+    basicInfo=rGetRawBasic(file, in_img$data$imzML, pixel-1)
     if(initMass ==0 || initMass<basicInfo$minMz  || initMass>basicInfo$maxMz)   {lowMz =basicInfo$minMz;}
     else {lowMz=initMass}
     if(finalMass==0 || finalMass>basicInfo$maxMz || finalMass<basicInfo$minMz)  {highMz=basicInfo$maxMz;}
@@ -409,77 +417,75 @@ getPixelGaussians<-function(data_file,
 
 #' @name getAverageGaussianSpectrum
 #' @title It obtains the average value of the Gaussian from all data into .imzML file.
-#' @param data_file: absolute reference to the file with the imzML extension.
-#' @param params  
-#'           "tolerance": desired tolerance for the centroids (ppm)
-#'                 "SNR": signal-to-noise ratio
-#'         "noiseMethod": method for estimating noise.
-#' @param initMass:  Initial  mass to consider. By default, the minimum value from the entire range of masses is used.
-#' @param finalMass: Final    mass to consider. By default, the maximum value from the entire range of masses is used.
-#' @param pxList:    list of pixels. First pixel=1. By default everyone.
-#' @param overSampling: interval between points on the mass axis = tolerance/overSampling.
-#' @param nThreads:  number of threads
-#' @param imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
-#' @param fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
+#' @param dataFile: absolute reference to the file with the imzML extension.
+#' @param parmas:
+#'       initMass: initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+#'      finalMass: final    mass to consider. By default, the maximum value from the entire range of masses is used.
+#'         pxList: list of pixels. First pixel=1. By default everyone.
+#'   overSampling: interval between points on the mass axis = tolerance/overSampling.
+#'       nThreads: number of threads for parallel processing (by default maxCores-1)
+#'  imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
+#'  fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 #'
 #' @return a list: averageMz and averageIntensity
-#'            averageMz: array of masses at intervals of 1/4 of the tolerance
+#'            averageMz: array of masses at intervals of the tolerance/overSampling
 #'     averageIntensity: array of average Gaussians values 
+#'     
 #' @export
-getAverageGaussianSpectrum<-function(data_file,
-                         params=c(),
-                         initMass=0,
-                         finalMass=0,
-                         pxList=c(0),
-                         overSampling=4,
-                         nThreads=0,
-                         imzMLChecksum = F, 
-                         fixBrokenUUID = F)
+getAverageGaussianSpectrum<-function(dataFile, params)
 {
-  if(!file.exists(data_file))
+  if(!file.exists(dataFile))
   {
     stop("File not found\n")
   }
   
-  if(length(params)==0)
+  if(missing(params))
   {
-    params=list("SNR"=1, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "linkedPeaks"=3, "tolerance"=33)
-    cat("defect parameters: SNR=1, noiseMethod=estnoise_mad, minPixelsSupport=1, linkedPeaks=3, tolerance=33\n")
+    params=list("SNR"=3, "noiseMethod"="estnoise_mad", "initMass"=0, "finalMass"=0,
+                "pxList"=c(), "nThreads"=0, "overSampling"=4, "imzMLChecksum"=F, "fixBrokenUUID"=F)
+    cat("defect parameters: SNR=3, noiseMethod=estnoise_mad, overSampling=4\n")
   }
   else
   {
-    #control de parámetros
+    #parameters control
     if(!(exists("SNR", where=params)))
     {
-      cat("warning: by default, SNR parameter will be 1.\n")
-      params=c(params, "SNR"=1)
-    }
-    if(!(exists("minPixelsSupport", where=params)))
-    {
-      cat("warning: by default, minPixelsSupport parameter will be 1%.\n")
-      params=c(params, "minPixelsSupport"=1)
+      cat("warning: by default, SNR parameter will be 3.\n")
+      params=c(params, "SNR"=3)
     }
     if(!(exists("noiseMethod", where=params)))
     {
       cat("warning: by default, noiseMethod will be MAD type.\n")
       params=c(params, "noiseMethod"="estnoise_mad")
     }
-    if(!(exists("linkedPeaks", where=params)))
-    {
-      #cat("warning: by default, linkedPeaks parameter will be 3 sd.\n") 
-      params=c(params, "linkedPeaks"=3)
-    }
-    if(!(exists("tolerance", where=params)))
-    {
-      cat("ERROR: tolerance parameter is required.\n") 
-      return (0)
-    }
+    if(!(exists("initMass", where=params)))
+      params=c(params, "initMass"=0)
+    
+    if(!(exists("finalMass", where=params)))
+      params=c(params, "finalMass"=0)
+    
+    if(!(exists("pxList", where=params)))
+      params=c(params, "pxList"=c(0))
+    
+    if(!(exists("nThreads", where=params)))
+      params=c(params, "nThreads"=0)
+    
+    if(!(exists("overSampling", where=params)))
+      params=c(params, "overSampling"=4)
+    
+    if(!(exists("imzMLChecksum", where=params)))
+      params=c(params, "imzMLChecksum"=F)
+    
+    if(!(exists("fixBrokenUUID", where=params)))
+      params=c(params, "fixBrokenUUID"=F)
   }
-  if(params$tolerance<=0)
-  {
-    cat("ERROR: tolerance must be greater than zero.\n") 
-    return (0)
-  }
+  initMass=params$initMass
+  finalMass=params$finalMass
+  nThreads=params$nThreads
+  imzMLChecksum=params$imzMLChecksum
+  fixBrokenUUID=params$fixBrokenUUID
+  overSampling=params$overSampling
+  
   if(nThreads>100)
   {
     cat("warning: max threads are 100\n")
@@ -490,12 +496,12 @@ getAverageGaussianSpectrum<-function(data_file,
   
   pt<-proc.time()
   
-  fileExtension <- unlist(strsplit(basename(data_file), split = "\\."))
+  fileExtension <- unlist(strsplit(basename(dataFile), split = "\\."))
   fileExtension <- as.character(fileExtension[length(fileExtension)])
   if( fileExtension == "imzML")
   {
     #capturing information from an imzML file.
-    in_img <- import_imzML(path.expand(data_file),  fun_progress = NULL, fun_text = NULL, 
+    in_img <- import_imzML(path.expand(dataFile),  fun_progress = NULL, fun_text = NULL, 
                            close_signal = NULL, verifyChecksum = imzMLChecksum, subImg_rename = NULL, 
                            subImg_Coords = NULL, fixBrokenUUID = fixBrokenUUID)
     
@@ -503,7 +509,7 @@ getAverageGaussianSpectrum<-function(data_file,
     file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
     
     #dimensioned (lowMz, highMz)
-    basicInfo=rGetBasicInfo(file, in_img$data$imzML, pxList-1)
+    basicInfo=rGetRawBasic(file, in_img$data$imzML, params$pxList-1)
     if(initMass ==0 || initMass<basicInfo$minMz  || initMass>basicInfo$maxMz)   {lowMz =basicInfo$minMz;}
     else {lowMz=initMass}
     if(finalMass==0 || finalMass>basicInfo$maxMz || finalMass<basicInfo$minMz)  {highMz=basicInfo$maxMz;}
@@ -515,7 +521,7 @@ getAverageGaussianSpectrum<-function(data_file,
       return(0)
     }
     
-    avSp=rGetAverageGaussianSpectrum(file, in_img$data$imzML, params, lowMz, highMz, pxList-1, overSampling, nThreads);
+    avSp=rGetAverageGaussianSpectrum(file, in_img$data$imzML, params, lowMz, highMz, params$pxList-1, overSampling, nThreads);
 
     pt<-proc.time() - pt
     display_processing_time(pt, "Data processing time")
@@ -529,48 +535,91 @@ getAverageGaussianSpectrum<-function(data_file,
 #' @name getAverageSpectrum
 #' @title It obtains the average value of the intensities from all data into .imzML file.
 #'        Noise is not taken into account.
-#' @param data_file: absolute reference to the file with the imzML extension.
-#' @param initMass:  Initial  mass to consider. By default, the minimum value from the entire range of masses is used.
-#' @param finalMass: Final    mass to consider. By default, the maximum value from the entire range of masses is used.
-#' @param pxList:    list of pixels. First pixel=1. By default everyone.
-#' @param     tolerance: desired tolerance for the centroids (ppm)
-#' @param  overSampling:  interval between points on the mass axis = tolerance/overSampling.
-#' @param imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
-#' @param fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
+#' @param dataFile: absolute reference to the file with the imzML extension.
+#' @param parmas:
+#'       initMass: initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+#'      finalMass: final    mass to consider. By default, the maximum value from the entire range of masses is used.
+#'         pxList: list of pixels. First pixel=1. By default everyone.
+#'   overSampling: interval between points on the mass axis = tolerance/overSampling.
+#'  imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
+#'  fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 #'
 #' @return a list: averageMz and averageIntensity
 #'            averageMz: array of masses at intervals of the tolerance/overSampling
 #'     averageIntensity: array of average Gaussians values 
 #' @export
-getAverageSpectrum<-function(data_file,
-                             initMass=0,
-                             finalMass=0,
-                             pxList=c(0),
-                             tolerance=33,
-                             overSampling=4,
-                             imzMLChecksum = F, 
-                             fixBrokenUUID = F)
+getAverageSpectrum<-function(dataFile, params)
 {
-  if(!file.exists(data_file))
+  if(!file.exists(dataFile))
   {
     stop("File not found\n")
   }
   
-  params=list("SNR"=1, "noiseMethod"="estnoise_mad", "minPixelsSupport"=1, "linkedPeaks"=3)
-  params=c(params, "tolerance"=tolerance)
+  if(missing(params))
+  {
+    params=list("SNR"=3, "noiseMethod"="estnoise_mad", "initMass"=0, "finalMass"=0,
+                "pxList"=c(), "nThreads"=0, "overSampling"=4, "imzMLChecksum"=F, "fixBrokenUUID"=F)
+    cat("defect parameters: SNR=3, noiseMethod=estnoise_mad, overSampling=4\n")
+  }
+  else
+  {
+    #parameters control
+    if(!(exists("SNR", where=params)))
+    {
+      cat("warning: by default, SNR parameter will be 3.\n")
+      params=c(params, "SNR"=3)
+    }
+    if(!(exists("noiseMethod", where=params)))
+    {
+      cat("warning: by default, noiseMethod will be MAD type.\n")
+      params=c(params, "noiseMethod"="estnoise_mad")
+    }
+    if(!(exists("initMass", where=params)))
+      params=c(params, "initMass"=0)
+    
+    if(!(exists("finalMass", where=params)))
+      params=c(params, "finalMass"=0)
+    
+    if(!(exists("pxList", where=params)))
+      params=c(params, "pxList"=c(0))
+    
+    if(!(exists("nThreads", where=params)))
+      params=c(params, "nThreads"=0)
+    
+    if(!(exists("overSampling", where=params)))
+      params=c(params, "overSampling"=4)
+    
+    if(!(exists("imzMLChecksum", where=params)))
+      params=c(params, "imzMLChecksum"=F)
+    
+    if(!(exists("fixBrokenUUID", where=params)))
+      params=c(params, "fixBrokenUUID"=F)
+  }
+  initMass=params$initMass
+  finalMass=params$finalMass
+  nThreads=params$nThreads
+  imzMLChecksum=params$imzMLChecksum
+  fixBrokenUUID=params$fixBrokenUUID
+  overSampling=params$overSampling
+  
+  if(nThreads>100)
+  {
+    cat("warning: max threads are 100\n")
+    nThreads=100;
+  }
   
   imgData <- NULL
   
   pt<-proc.time()
   
-  baseDir=rGetDirectory(data_file)
+  baseDir=rGetDirectory(dataFile)
   
-  fileExtension <- unlist(strsplit(basename(data_file), split = "\\."))
+  fileExtension <- unlist(strsplit(basename(dataFile), split = "\\."))
   fileExtension <- as.character(fileExtension[length(fileExtension)])
   if( fileExtension == "imzML")
   {
     #capturing information from an imzML file.
-    in_img <- import_imzML(path.expand(data_file),  fun_progress = NULL, fun_text = NULL, 
+    in_img <- import_imzML(path.expand(dataFile),  fun_progress = NULL, fun_text = NULL, 
                            close_signal = NULL, verifyChecksum = imzMLChecksum, subImg_rename = NULL, 
                            subImg_Coords = NULL, fixBrokenUUID = fixBrokenUUID)
     
@@ -578,7 +627,7 @@ getAverageSpectrum<-function(data_file,
     file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
     
     #dimensioned (lowMz, highMz)
-    basicInfo=rGetBasicInfo(file, in_img$data$imzML, pxList-1)
+    basicInfo=rGetRawBasic(file, in_img$data$imzML, params$pxList-1)
     if(initMass ==0 || initMass<basicInfo$minMz  || initMass>basicInfo$maxMz)   {lowMz =basicInfo$minMz;}
     else {lowMz=initMass}
     if(finalMass==0 || finalMass>basicInfo$maxMz || finalMass<basicInfo$minMz)  {highMz=basicInfo$maxMz;}
@@ -590,7 +639,7 @@ getAverageSpectrum<-function(data_file,
       return(0)
     }
     
-    avSp=rGetAverageSpectrum(file, in_img$data$imzML, params, lowMz, highMz, pxList-1, overSampling);
+    avSp=rGetAverageSpectrum(file, in_img$data$imzML, params, lowMz, highMz, params$pxList-1, overSampling);
     
     pt<-proc.time() - pt
     display_processing_time(pt, "Data processing time")
@@ -604,11 +653,12 @@ getAverageSpectrum<-function(data_file,
 #' @name getGaussiansFromSpectrum
 #' @title Form Gaussians over each peak of the given spectrum.
 #' @param Intensity:   vector with value associated with each mass point.
-#' @param mz:          vector with mass/charge information
-#' @param initMass:  Initial  mass to consider. By default, the minimum value from the entire range of masses is used.
-#' @param finalMass: Final    mass to consider. By default, the maximum value from the entire range of masses is used.
-#' @param SNR:         signal-to-noise ratio
-#' @param noiseMethod: method for estimating noise (estnoise_diff, estnoise_sd, estnoise_mad).
+#' @param mass:        vector with mass/charge information
+#' @param params:
+#'        initMass:    initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+#'        finalMass:   final    mass to consider. By default, the maximum value from the entire range of masses is used.
+#'        SNR:         signal-to-noise ratio
+#'        noiseMethod: method for estimating noise (estnoise_diff, estnoise_sd, estnoise_mad).
 #'
 #' @return List: gaussians, mass intensity, SNR, noise
 #'       gaussians: matrix with parameters for each Gaussian
@@ -617,25 +667,47 @@ getAverageSpectrum<-function(data_file,
 #'             SNR: signal-to-noise ratio associated with each mass of the raw spectrum.
 #'           noise: noise estimation
 #' @export
-getGaussiansFromSpectrum<-function(
-                              intensity,
-                              mz,
-                              initMass=0,
-                              finalMass=0,
-                              SNR=3,
-                              noiseMethod="estnoise_mad")
+getGaussiansFromSpectrum<-function(intensity, mass, params)
 {
-
-  #control de parámetros
-    params=list("SNR"=3, "noiseMethod"="estnoise_mad", "tolerance"=33, "minPixelsSupport"=1, "linkedPeaks"=3)
-
-    params$SNR=SNR
-    params$noiseMethod=noiseMethod
-  if(length(intensity) != length(mz))
+  if(length(mass)==0)
+  {
+    cat("no data\n")
+    return(0)
+  }
+  if(length(intensity) != length(mass))
   {
     cat("warning: vectors must have the same length.\n")
     return(0)
   }
+  if(missing(params))
+  {
+    params=list("SNR"=3, "noiseMethod"="estnoise_mad", "initMass"=0, "finalMass"=0,
+                "pxList"=c(), "nThreads"=0)
+    cat("defect parameters: SNR=3, noiseMethod=estnoise_mad\n")
+  }
+  else
+  {
+    #parameters control
+    if(!(exists("SNR", where=params)))
+    {
+      cat("warning: by default, SNR parameter will be 3.\n")
+      params=c(params, "SNR"=3)
+    }
+    if(!(exists("noiseMethod", where=params)))
+    {
+      cat("warning: by default, noiseMethod will be MAD type.\n")
+      params=c(params, "noiseMethod"="estnoise_mad")
+    }
+    if(!(exists("initMass", where=params)))
+      params=c(params, "initMass"=mass[0])
+    
+    if(!(exists("finalMass", where=params)))
+      params=c(params, "finalMass"=mass[length[mass]])
+    
+  }
+  initMass=params$initMass
+  finalMass=params$finalMass
+
     pt<-proc.time()
   
     if(initMass>finalMass)
@@ -643,10 +715,10 @@ getGaussiansFromSpectrum<-function(
       cat("warning: the lower mass exceeds the upper mass.\n")
       initMass=finalMass
     }
-    if(initMass==0)  initMass =min(mz);
-    if(finalMass==0) finalMass=max(mz);
+    if(initMass==0)  initMass =min(mass);
+    if(finalMass==0) finalMass=max(mass);
   
-    Gauss=rGetGaussiansFromSpectrum(intensity, mz, params, initMass, finalMass);
+    Gauss=rGetGaussiansFromSpectrum(intensity, mass, params, initMass, finalMass);
     
     pt<-proc.time() - pt
     display_processing_time(pt, "Data processing time")
@@ -655,122 +727,105 @@ getGaussiansFromSpectrum<-function(
 
 #//////////////////////////////////////////////////////////////
 
-#' @name getMetaDataFromFile
-#' @title returns generic information about the peak matrix located in a file.
-#' @param file -> file name with peak matrix  (tmpPeakMatrix.bin)
-#' @return a list:
-#'   nSamples     -> number of samples analyzed.
-#'   totalPx      -> total number of pixels (cumulative of each sample).
-#'   nIons        -> number of columns in the matrix.
-#'   pixelsSample -> vector with the pixels in each sample.
+
+#' @name getBasic
+#' @title returns generic information about centroids located in file _peakMatrix.bin.
+#' @param data -> a list from getPeakMatriz()
+#' @return a list: 
+#'           mass: Vector with the masses associated with each column of peakMatrix.
+#'      intensity: vector of average intensities of all pixels associated to centroid
+#'      tolerance: Vector of tolerances achieved for this centroid (ppm)
+#'  pixelsSupport: Vector with the number of pixels in each column with non-zero intensity. 
+#'   pixelsSample: Vector with the number of pixels in each of the samples. In the peakMatrix and coordinates they appear in the same order.
 #'
 #' @export
-getMetaDataFromFile<-function(file)
+getBasic<-function(data)
 {
-  return(rGetMetaDataFromFile(file));
+  z=unlist(strsplit(basename(data$dataFiles[1]), split = "\\."))[1]
+  baseName= paste0(data$outDirectory, z)
+  file=paste0(baseName, "_peakMatrix.bin")
+  return(rGetBasic(file))
 }
+
 
 #//////////////////////////////////////////////////////////////
 
-#' @name getPeakMatrixFromFile
-#' @title return the peak matrix into file
-#' @param file -> file name with peak matrix (tmpPeakMatrix.bin)
-#' @return a list:
-#'     peakMatrix: Matrix of peak (centroids) rows = pixels, columns = intensity of each pixel.
-#'           mass: Vector with the masses associated with each column of peakMatrix.
-#'      tolerance: desired tolerance for the centroids (ppm)
-#'  pixelsSupport: Vector with the number of pixels in each column with non-zero intensity. 
-
-#' @export
-getPeakMatrixFromFile<-function(file)
-{
-metaInfo=rGetMetaDataFromFile(file) #generic information from peak matrix
-
-pkMatrix=matrix(ncol=metaInfo$nIons, nrow=metaInfo$totalPx);
-mass=vector(length = metaInfo$nIons)
-tolerance=vector(length = metaInfo$nIons)
-pxSupport=vector(length = metaInfo$nIons)
-
-#load ion by ion (This reduces the memory required)
-for(ion in 1:metaInfo$nIons)
-{
-  tmpIon=rGetIntensityFromFile(file, ion)
-  mass[ion]=tmpIon[1];
-  tolerance[ion]=tmpIon[2];
-  pxSupport[ion]=tmpIon[3];
-  pkMatrix[,ion]=tmpIon[4:length(tmpIon)]
-}
-peakMatrix <- list("peakMatrix" = pkMatrix, "mass" = mass, "tolerance" = tolerance,
-                   "pixelsSupport"=pxSupport) 
-return(peakMatrix)
-}
-
-#//////////////////////////////////////////////////////////////
-
-#' @name getMassVectorFromFile()
-#' @title returns a vector with all the masses in peak matrix 
-#' @param file     -> file name with peak matrix (tmpPeakMatrix.bin)
-#' @return mass vector
-
-#' @export
-getMassVectorFromFile<-function(file)
-{
-  return (rGetMassVectorFromFile(file))
-}
-
-#//////////////////////////////////////////////////////////////
-
-#' @name getColumnFromFile()
+#' @name getCentroid()
 #' @title returns a column information of the peak matrix: 
 #' 
-#' @param file     -> file name with peak matrix (tmpPeakMatrix.bin)
+#' @param data     -> a list from getPeakMatriz()
 #' @param mass     -> reference to the desired initial column of the peak matrix (Da).
 #' @param sample   -> just download the pixels from this sample.
 #'                    if sample=0, all sample coordinates are returned
 #' @return a list:
 #'     intensity: vector of intesities 
 #'          mass: mass associated with the column of peakMatrix.
-#'     tolerance: desired tolerance for the centroids (ppm)
+#'     tolerance: Tolerance achieved for this centroid (ppm)
 #' pixelsSupport: number of pixels in column with non-zero intensity. 
 #' 
 #' @export
-getColumnFromFile<-function(file, mass, sample)
+getCentroid<-function(data, mass, sample=1)
 {
-  return (rGetColumnFromFile(file, mass, sample))
+  if(sample>length(data$dataFiles))
+  {
+    cat(sprintf("Warning: maxSample=%d\n", length(data$dataFiles)))
+    return(0)
+  }
+  z=unlist(strsplit(basename(data$dataFiles[1]), split = "\\."))[1]
+  baseName= paste0(data$outDirectory, z)
+  file=paste0(baseName, "_peakMatrix.bin")
+  ret=rGetCentroid(file, mass, sample-1)
+  return (ret)
 }
 
 #//////////////////////////////////////////////////////////////
 
-#' @name getIntensityFromFile()
-#' @title returns a column whit pixels intensities from the peak matrix: 
-#' 
-#' @param file -> file name with peak matrix (tmpPeakMatrix.bin)
-#' @param column -> desired column (first = 1)
-#' @return a vector with intensity of each pixel.
-#' 
-#' @export
-getIntensityFromFile<-function(file, column)
-{
-  return (rGetIntensityFromFile(file, column))
-}
 
-#//////////////////////////////////////////////////////////////
-
-#' @name getCoordinatesFromFile()
+#' @name getPixelsCoordinates
 #' @title returns a matrix with the coordinates of all pixels (X/Y).
 #' If there are multiple samples, they appear sequentially; that is, the matrix has as many rows 
 #' as the cumulative number of pixels in each sample and two columns.
-#' @param file   -> file name with pixels coordinates (tmpPixelsCoordinates.bin)
+#' @param data   -> a list from getPeakMatriz()
 #' @param sample -> just download the pixels from this sample.
 #'                  if sample < 1, all sample coordinates are returned
-#' @return a matrix with the coordinates (X/Y) of pixels.
+#' @return a list:
+#'        pixelSize: lateral resolution of pixels
+#'    pxCoordinates: matrix with the coordinates (X/Y) of pixels.
 #' 
 #' @export
-getCoordinatesFromFile<-function(file, sample)
+getPixelsCoordinates<-function(data, sample=1)
 {
-return(rGetCoordinatesFromFile(file, sample))
+  z=unlist(strsplit(basename(data$dataFiles[1]), split = "\\."))[1]
+  baseName= paste0(data$outDirectory, z)
+  file=paste0(baseName, "_massRange.bin")
+  pxSize=rLoadMassRange(file); #[1],[2]=mass range to file, [3].. pxSizes
+  nSamples=length(pxSize)-2;
+  if(sample>nSamples)
+  {
+    cat(sprintf("Warning: maxSample=%d\n", nSamples))
+    return(0)
+  }
+  file=paste0(baseName, "_pixelsCoord.bin")
+  pxCoord=rGetPixelsCoordinates(file, sample)
+  if(sample<1) sample=1
+  ret=list("pixelSize"=pxSize[2+sample], "pxCoordinates"=pxCoord)
+  return(ret)
 }
+#//////////////////////////////////////////////////////////////
 
+#' @name saveContext
+#' @title save info about conditions of test
+#' @param samples   -> a character vector with all raw files
+#' @param outBaseDir -> output directory where files will be created
+#'                 
+#' @return none
+#' 
+saveContext<-function(samples, outBaseDir, params)
+{
+  data=list("dataFiles"=samples, "outDirectory"=outBaseDir, "params"=params)
+  fileA=paste0(data$outDirectory, "data.RData")
+  save(data, file=fileA);
+}
 
 #//////////////////////////////////////////////////////////////
 #' uuid.

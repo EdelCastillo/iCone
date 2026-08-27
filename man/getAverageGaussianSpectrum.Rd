@@ -4,42 +4,22 @@
 \alias{getAverageGaussianSpectrum}
 \title{It obtains the average value of the Gaussian from all data into .imzML file.}
 \usage{
-getAverageGaussianSpectrum(
-  data_file,
-  params = c(),
-  initMass = 0,
-  finalMass = 0,
-  pxList = c(0),
-  overSampling = 4,
-  nThreads = 0,
-  imzMLChecksum = F,
-  fixBrokenUUID = F
-)
+getAverageGaussianSpectrum(dataFile, params)
 }
 \arguments{
-\item{params}{"tolerance": desired tolerance for the centroids (ppm)
-"SNR": signal-to-noise ratio
-"noiseMethod": method for estimating noise.}
+\item{dataFile:}{absolute reference to the file with the imzML extension.}
 
-\item{data_file:}{absolute reference to the file with the imzML extension.}
-
-\item{initMass:}{Initial  mass to consider. By default, the minimum value from the entire range of masses is used.}
-
-\item{finalMass:}{Final    mass to consider. By default, the maximum value from the entire range of masses is used.}
-
-\item{pxList:}{list of pixels. First pixel=1. By default everyone.}
-
-\item{overSampling:}{interval between points on the mass axis = tolerance/overSampling.}
-
-\item{nThreads:}{number of threads}
-
-\item{imzMLChecksum:}{if the binary file checksum must be verified, it can be disabled for convenice with really big files.}
-
-\item{fixBrokenUUID:}{set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).}
+\item{parmas:}{initMass: initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+finalMass: final    mass to consider. By default, the maximum value from the entire range of masses is used.
+pxList: list of pixels. First pixel=1. By default everyone.
+overSampling: interval between points on the mass axis = tolerance/overSampling.
+nThreads: number of threads for parallel processing (by default maxCores-1)
+imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
+fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).}
 }
 \value{
 a list: averageMz and averageIntensity
-averageMz: array of masses at intervals of 1/4 of the tolerance
+averageMz: array of masses at intervals of the tolerance/overSampling
 averageIntensity: array of average Gaussians values
 }
 \description{

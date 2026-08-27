@@ -26,7 +26,6 @@
 #include <time.h>
 #include <sys/time.h>    
 #include "rGetImzMLData.h"
-#include "kmeansR.h"
 #include <thread>
 #include <mutex>
 #include <chrono>

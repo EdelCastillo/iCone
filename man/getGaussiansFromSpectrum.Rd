@@ -4,27 +4,17 @@
 \alias{getGaussiansFromSpectrum}
 \title{Form Gaussians over each peak of the given spectrum.}
 \usage{
-getGaussiansFromSpectrum(
-  intensity,
-  mz,
-  initMass = 0,
-  finalMass = 0,
-  SNR = 3,
-  noiseMethod = "estnoise_mad"
-)
+getGaussiansFromSpectrum(intensity, mass, params)
 }
 \arguments{
 \item{Intensity:}{vector with value associated with each mass point.}
 
-\item{mz:}{vector with mass/charge information}
+\item{mass:}{vector with mass/charge information}
 
-\item{initMass:}{Initial  mass to consider. By default, the minimum value from the entire range of masses is used.}
-
-\item{finalMass:}{Final    mass to consider. By default, the maximum value from the entire range of masses is used.}
-
-\item{SNR:}{signal-to-noise ratio}
-
-\item{noiseMethod:}{method for estimating noise (estnoise_diff, estnoise_sd, estnoise_mad).}
+\item{params:}{initMass:    initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+finalMass:   final    mass to consider. By default, the maximum value from the entire range of masses is used.
+SNR:         signal-to-noise ratio
+noiseMethod: method for estimating noise (estnoise_diff, estnoise_sd, estnoise_mad).}
 }
 \value{
 List: gaussians, mass intensity, SNR, noise

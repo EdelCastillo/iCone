@@ -65,7 +65,7 @@
    //conversion Rcpp::String to char*
    char *fileName=new char[200];
    strcpy(fileName, (char*)baseDir.get_cstring());
-   strcat(fileName, (char*)"tmpGaussians.bin");
+   strcat(fileName, (char*)"_gaussians.bin");
    
    bool hit=pMatrix.saveGaussians(fileName, pMatrix.m_gaussians_p);
    delete []fileName;
@@ -73,7 +73,7 @@
  }
  
  //information capture
- //'  @name rGetBasicInfo
+ //'  @name rGetRawBasic
  //'  @title returns basic information about dimensions from the imzML file.
  //'  
  //'  @param ibdFname:  absolute reference to the file with the ibd extension.
@@ -82,7 +82,7 @@
  //'  @return list:     minPixel, maxPixel, minMz, maxMz
  //'     
  // [[Rcpp::export]]
- List rGetBasicInfo(const char* ibdFname, Rcpp::List imzML, Rcpp::NumericVector pxList)
+ List rGetRawBasic(const char* ibdFname, Rcpp::List imzML, Rcpp::NumericVector pxList)
  {
    //class for accessing imzML files.
    GetImzMLData *getImzMLData_p=0;
@@ -246,7 +246,7 @@
  }
  
  //'  @name rSaveMassRange
- //'  @title save the mz range information to file massRange.bin
+ //'  @title save the mz range information to file _massRange.bin
  //'  
  //'  @param mzLow    -> low  m/z
  //'  @param mzHigh   -> high m/z
@@ -254,7 +254,7 @@
  //'  @return TRUE if the file could not be opened.
  //'  
  // [[Rcpp::export]]
-bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
+bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVector pixelSize)
 {
   std::fstream fp;
   fp.open(fileName, std::fstream::out | std::ios::binary | std::ios::trunc);
@@ -268,12 +268,21 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
   
   fp.write((char*)&mzLow,  sizeof(double)); 
   fp.write((char*)&mzHigh, sizeof(double)); 
+  int pxSize=pixelSize.size();
+  double tmp;
+  fp.write((char*)&pxSize, sizeof(int));
+  for(int i=0; i<pxSize; i++)
+  {
+    tmp=pixelSize[i];
+    fp.write((char*)&tmp, sizeof(double)); 
+  }
+  
   fp.close();
   return FALSE;
 }
  
  //'  @name rLoadMassRange
- //'  @title load the mz range information from file massRange.bin
+ //'  @title load the mz range information from file _massRange.bin
  //'  @param fileName ->absolute path to file
  //'  @return a vector whit mzLow, mzHigh. Zero if error
  //'  
@@ -289,13 +298,21 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
      throw std::runtime_error(txt);
      return 0;
    }
-   double mzLow, mzHigh;
+   double mzLow, mzHigh, pixelSize;
    fp.read((char*)&mzLow,  sizeof(double)); 
    fp.read((char*)&mzHigh, sizeof(double)); 
+   int pxSize;
+   double tmp;
+   fp.read((char*)&pxSize, sizeof(int)); 
+   NumericVector ret(2+pxSize);
+   ret[0]=mzLow;
+   ret[1]=mzHigh;
+   for(int i=0;  i<pxSize; i++)
+   {
+     fp.read((char*)&tmp, sizeof(double)); 
+     ret[2+i]=tmp;
+   }
    fp.close();
-   NumericVector ret(2);
-   ret(0)=mzLow;
-   ret(1)=mzHigh;
    return ret;
  }
 
@@ -384,7 +401,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
    
    char fileName[200];
    strcpy(fileName, baseDir);
-   strcat(fileName, "tmpPixelsCoordinates.bin");
+   strcat(fileName, "_pixelsCoord.bin");
    savePixelsCoordinates(fileName, X, Y);
    
    nv=params["SNR"];
@@ -1085,6 +1102,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh)
  }
  
  // Saves the Gaussian data to the given file
+ // Saves all pixels, including those without content.
  // Adds it to any existing data
  // Returns false if failed 
  bool RawToGaussians::saveGaussians(char *fileName, GAUSS_SP *gauss_p)

@@ -5,33 +5,17 @@
 \title{It obtains the average value of the intensities from all data into .imzML file.
 Noise is not taken into account.}
 \usage{
-getAverageSpectrum(
-  data_file,
-  initMass = 0,
-  finalMass = 0,
-  pxList = c(0),
-  tolerance = 33,
-  overSampling = 4,
-  imzMLChecksum = F,
-  fixBrokenUUID = F
-)
+getAverageSpectrum(dataFile, params)
 }
 \arguments{
-\item{data_file:}{absolute reference to the file with the imzML extension.}
+\item{dataFile:}{absolute reference to the file with the imzML extension.}
 
-\item{initMass:}{Initial  mass to consider. By default, the minimum value from the entire range of masses is used.}
-
-\item{finalMass:}{Final    mass to consider. By default, the maximum value from the entire range of masses is used.}
-
-\item{pxList:}{list of pixels. First pixel=1. By default everyone.}
-
-\item{tolerance:}{desired tolerance for the centroids (ppm)}
-
-\item{overSampling:}{interval between points on the mass axis = tolerance/overSampling.}
-
-\item{imzMLChecksum:}{if the binary file checksum must be verified, it can be disabled for convenice with really big files.}
-
-\item{fixBrokenUUID:}{set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).}
+\item{parmas:}{initMass: initial  mass to consider. By default, the minimum value from the entire range of masses is used.
+finalMass: final    mass to consider. By default, the maximum value from the entire range of masses is used.
+pxList: list of pixels. First pixel=1. By default everyone.
+overSampling: interval between points on the mass axis = tolerance/overSampling.
+imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
+fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).}
 }
 \value{
 a list: averageMz and averageIntensity
