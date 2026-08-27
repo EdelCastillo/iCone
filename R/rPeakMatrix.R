@@ -52,6 +52,10 @@ getPeakMatrix<-function(dataFiles, outDirectory, params)
   {
     outBaseDir=inBaseDir
   }
+  else
+  {
+    outBaseDir=outDirectory
+  }
   if(missing(params))
   {
     params=list("SNR"=3, "tolerance"=16, "minPixelsSupport"=5, "noiseMethod"="estnoise_mad", "initMass"=0, "finalMass"=0,
