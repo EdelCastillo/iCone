@@ -5,7 +5,7 @@
 \alias{getCentroid}
 \title{returns a column information of the peak matrix:}
 \usage{
-getCentroid(data, mass, sample = 1)
+getCentroid(data, mass, sample = 1, expand = T)
 }
 \arguments{
 \item{data}{-> a list from getPeakMatriz()}

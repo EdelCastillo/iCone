@@ -190,8 +190,8 @@ rGetBasic <- function(file) {
     .Call('_iCone_rGetBasic', PACKAGE = 'iCone', file)
 }
 
-rGetCentroid <- function(file, mass, sample) {
-    .Call('_iCone_rGetCentroid', PACKAGE = 'iCone', file, mass, sample)
+rGetCentroid <- function(file, mass, sample, expand) {
+    .Call('_iCone_rGetCentroid', PACKAGE = 'iCone', file, mass, sample, expand)
 }
 
 peakMatrixR <- function(baseDir, params, mzLow, mzHigh, nPixels, nSamples) {

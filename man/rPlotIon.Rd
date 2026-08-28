@@ -4,12 +4,12 @@
 \alias{rPlotIon}
 \title{visualize an ion.}
 \usage{
-rPlotIon(pMatrix, mz)
+rPlotIon(intensity, coordinates)
 }
 \arguments{
-\item{pMatrix:}{peak matrix from getPeakMatrix().}
+\item{intensity}{:intensity values for each coordinates.}
 
-\item{mz:}{desired mass (Da).}
+\item{coordinates:}{position en plane X/Y.}
 }
 \description{
 visualize an ion.

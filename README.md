@@ -88,7 +88,7 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
    pixelsSample: Vector with the number of pixels in each of the samples. In the peakMatrix and coordinates they appear in the same order.
 ```
 
-> centroid <- **getCentroid**(data, mass, sample=1)
+> centroid <- **getCentroid**(data, mass, sample=1, expand=T)
 
  Returns a column information of the peak matrix. Located in file _peakMatrix.bin.
 
@@ -97,6 +97,9 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
           data: A list from getPeakMatriz()
           mass: Mass to the desired column of the peak matrix (Da).
         sample: Just download the pixels from this sample.
+        expand: If true,  it returns the intensity values for all the pixels in the sample.
+                If false, it returns the intensity values only for the sample pixels with non-zero values.
+                       in this case, return two vectors: intensity and pixels
                 if sample=0, data for all samples are returned
 return a list:
      intensity: Vector of intesities 

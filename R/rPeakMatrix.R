@@ -297,7 +297,7 @@ getPeakMatrix<-function(dataFiles, outDirectory, params)
   ret=peakMatrixR(baseName, params, massRange[1], massRange[2], totalPixels, totalSamples);
   gc() 
   
-  data=list("dataFiles"=dataFiles, "outDirectory"=outBaseDir, "params"=params)
+  data=list("dataFiles"=samples, "outDirectory"=outBaseDir, "params"=params)
   
   pt<-proc.time() - pt
   display_processing_time(pt, "Data processing time")
@@ -768,7 +768,7 @@ getBasic<-function(data)
 #' pixelsSupport: number of pixels in column with non-zero intensity. 
 #' 
 #' @export
-getCentroid<-function(data, mass, sample=1)
+getCentroid<-function(data, mass, sample=1, expand=T)
 {
   if(sample>length(data$dataFiles))
   {
@@ -778,7 +778,7 @@ getCentroid<-function(data, mass, sample=1)
   z=unlist(strsplit(basename(data$dataFiles[1]), split = "\\."))[1]
   baseName= paste0(data$outDirectory, z)
   file=paste0(baseName, "_peakMatrix.bin")
-  ret=rGetCentroid(file, mass, sample-1)
+  ret=rGetCentroid(file, mass, sample-1, expand)
   return (ret)
 }
 

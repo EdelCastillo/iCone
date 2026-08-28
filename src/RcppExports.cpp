@@ -255,15 +255,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // rGetCentroid
-List rGetCentroid(const char* file, double mass, int sample);
-RcppExport SEXP _iCone_rGetCentroid(SEXP fileSEXP, SEXP massSEXP, SEXP sampleSEXP) {
+List rGetCentroid(const char* file, double mass, int sample, bool expand);
+RcppExport SEXP _iCone_rGetCentroid(SEXP fileSEXP, SEXP massSEXP, SEXP sampleSEXP, SEXP expandSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const char* >::type file(fileSEXP);
     Rcpp::traits::input_parameter< double >::type mass(massSEXP);
     Rcpp::traits::input_parameter< int >::type sample(sampleSEXP);
-    rcpp_result_gen = Rcpp::wrap(rGetCentroid(file, mass, sample));
+    Rcpp::traits::input_parameter< bool >::type expand(expandSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetCentroid(file, mass, sample, expand));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -405,7 +406,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_iCone_rGetPixelGaussians", (DL_FUNC) &_iCone_rGetPixelGaussians, 6},
     {"_iCone_rGetPixelsCoordinates", (DL_FUNC) &_iCone_rGetPixelsCoordinates, 2},
     {"_iCone_rGetBasic", (DL_FUNC) &_iCone_rGetBasic, 1},
-    {"_iCone_rGetCentroid", (DL_FUNC) &_iCone_rGetCentroid, 3},
+    {"_iCone_rGetCentroid", (DL_FUNC) &_iCone_rGetCentroid, 4},
     {"_iCone_peakMatrixR", (DL_FUNC) &_iCone_peakMatrixR, 6},
     {"_iCone_rawToGaussiansR", (DL_FUNC) &_iCone_rawToGaussiansR, 8},
     {"_iCone_rGetRawBasic", (DL_FUNC) &_iCone_rGetRawBasic, 3},

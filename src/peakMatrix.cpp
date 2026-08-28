@@ -192,12 +192,15 @@ NumericMatrix rGetPixelsCoordinates(const char* fileName, int sample)
    return ret;
  }
 
- //' @name rGetColumFromFile()
- //' @title returns a column information of the peak matrix: 
+ //' @name rGetCentroid()
+ //' @title returns a column information of the peak matrix. only non-zero pixels. 
  //' 
  //' @param file     -> file name with peak matrix (_peakMatrix.bin)
  //' @param mass     -> reference to the desired initial column of the peak matrix (Da).
  //' @param sample   -> just download the pixels intensity from this sample.
+ //' @param expand   -> if true,  it returns the intensity values for all the pixels in the sample.
+ //'                    if false, it returns the intensity values only for the sample pixels with non-zero values.
+ //'                       in this case, return two vectors: intensity and pixel
  //'                    if sample is out of limits, pixels from all samples are returned
  //' @return a list:
  //'     intensity: vector of intesities 
@@ -206,7 +209,7 @@ NumericMatrix rGetPixelsCoordinates(const char* fileName, int sample)
  //'     tolerance: centroid tolerance (ppm).
 
  // [[Rcpp::export]]
- List rGetCentroid(const char* file, double mass, int sample)
+ List rGetCentroid(const char* file, double mass, int sample, bool expand)
  {
    std::fstream fp;
    std::streampos ionPos, colSize, offset;
@@ -288,22 +291,38 @@ NumericMatrix rGetPixelsCoordinates(const char* fileName, int sample)
       fp.read((char*)&tmpIntensity, sizeof(double));
       if(tmpPixel>=pxLow && tmpPixel<=pxHigh) //pixel into range?
         {
-        pixel_p[pxSize]=tmpPixel-pxLow+1; //+1 to R
+        pixel_p[pxSize]=tmpPixel-pxLow;
         intensity_p[pxSize++]=tmpIntensity;
         }
      }
+    List ret;
     //link to R
-    NumericVector intensity(pxSize);
-    IntegerVector pixel(pxSize);
-    for(int i=0; i<pxSize; i++)
+    if(expand)
     {
-      intensity[i]=intensity_p[i];
-      pixel[i]=pixel_p[i];
+      int pxIntoSample=pxSample[sample];
+
+      NumericVector intensity(pxIntoSample);
+      for(int i=0; i<pxIntoSample; i++) intensity[i]=0;
+      for(int i=0; i<pxSize; i++)
+      {
+        intensity[pixel_p[i]]=intensity_p[i];
+      }
+      ret=List::create(Named("mass")=massAxis_p[massIndex], Named("tolerance")=tmpTolerance, 
+                            Named("intensity")=intensity);
     }
-    
+    else
+    {
+      NumericVector intensity(pxSize);
+      IntegerVector pixel(pxSize);
+      for(int i=0; i<pxSize; i++)
+      {
+        intensity[i]=intensity_p[i];
+        pixel[i]=pixel_p[i];
+      }
+      ret=List::create(Named("mass")=massAxis_p[massIndex], Named("tolerance")=tmpTolerance, 
+                            Named("intensity")=intensity, Named("pixel")=pixel+1);  //+1 to R
+    }
     fp.close();
-    List ret=List::create(Named("mass")=massAxis_p[massIndex], Named("tolerance")=tmpTolerance, 
-                          Named("intensity")=intensity, Named("pixel")=pixel);
     if(massAxis_p)    delete []massAxis_p;
     if(colSize_p)     delete []colSize_p;
     if(pixel_p)       delete []pixel_p;
