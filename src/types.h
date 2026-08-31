@@ -23,9 +23,11 @@
 #include <thread>
 #include <mutex>
 #include "GMM.h"
-
+ 
 #define MAX_THREADS 100
 #define MAX_SAMPLES 150
+#define MEAN 0
+#define MAX  1
 
     typedef struct{
         int x, y;

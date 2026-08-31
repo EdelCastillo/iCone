@@ -40,7 +40,7 @@ public:
   //         mzLow: lower  mass to consider
   //        mzHigh: higher mass to consider
   //     pxSupport: minimum percentage of pixels that must support an ion for it to be considered.
-  PeakMatrix(int totalPixels, double massResolution, double mzLow, double mzHigh, double pxSupport, int nSamples, char *baseDir);
+  PeakMatrix(int totalPixels, double massResolution, double mzLow, double mzHigh, double pxSupport, int *pxSamples_p, int nSamples, char *baseDir, int intMethod=MEAN);
     
   //destructor
   ~PeakMatrix();
@@ -65,7 +65,7 @@ public:
   //iGauss_p: vector of internally generated gaussians index
   //massSize: size of reserved memory for each vector.
   //Returns the number of masses.
-  int getCentroidsIntoRange(double *mass_p, int *px_p, int *iGauss_p, int massSize);
+  int getCentroidsIntoRange(double *mass_p, int *px_p, double *intensity_p, int massSize);
   
   //Determines the centers of groups of values whose distance does not exceed a given tolerance.
   //mass_p: vector masses.
@@ -73,7 +73,7 @@ public:
   //iGauss_p: vector gaussians index
   //tolerance: maximum bin size.
   //Returns the number of centers detected (length of the centers_p array).
-  int centers(double *mass_p, int *px_p, int *iGauss_p, int size, double tolerance);
+  int centers(double *mass_p, int *px_p, double *intensity_p, int size, double tolerance);
   
   //generate de peak matrix with the centroids, their tolerance, and the number of support pixels.  
   int getCentroids();
@@ -97,9 +97,9 @@ public:
   m_linkedPeaks;
   GAUSS_SP      *m_gaussians_p;
   MASS_RANGE    *m_massRange_p;
-  ION_ENTRY     m_ionEntry;
-  int           m_pixelsSample[MAX_SAMPLES];
+  int           *m_pxSamples_p;
   PIXEL_XY      *m_pixelsCoordinates_p;
   char *        m_baseDir;
+  int          m_intMethod;
 };
 #endif

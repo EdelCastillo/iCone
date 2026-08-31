@@ -33,13 +33,14 @@
 #'             finalMass: final   mass to consider. By default, the maximum value from the entire range of masses is used.
 #'                pxList: list of pixels. First pixel=1. By default everyone.
 #'              nThreads: number of threads for parallel processing (by default maxCores-1)
+#'             intMethod: intensity values for the binning stage: mean, max
 #'         imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
 #'         fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 #'
 #' @return a list with the input parameters 
 #' 
 #' @export
-getPeakMatrix<-function(dataFiles, outDirectory, params)
+getPeakMatrix<-function(dataFiles, params, outDirectory)
 {
   if(missing(dataFiles))
   {
@@ -59,7 +60,7 @@ getPeakMatrix<-function(dataFiles, outDirectory, params)
   if(missing(params))
   {
     params=list("SNR"=3, "tolerance"=16, "minPixelsSupport"=5, "noiseMethod"="estnoise_mad", "initMass"=0, "finalMass"=0,
-                "pxList"=c(), "nThreads"=0, "imzMLChecksum"=F, "fixBrokenUUID"=F)
+                "pxList"=c(), "nThreads"=0, "intMethod"="mean", "imzMLChecksum"=F, "fixBrokenUUID"=F)
             
   }
   
@@ -106,6 +107,9 @@ getPeakMatrix<-function(dataFiles, outDirectory, params)
   if(!(exists("nThreads", where=params)))
     params=c(params, "nThreads"=0)
   
+  if(!(exists("intMethod", where=params)))
+    params=c(params, "intMethod"="mean")
+
   if(!(exists("imzMLChecksum", where=params)))
     params=c(params, "imzMLChecksum"=F)
   
@@ -206,6 +210,7 @@ getPeakMatrix<-function(dataFiles, outDirectory, params)
   
   saveContext(samples, outBaseDir, params);
   
+  pxSamples=rep(0, times=nSamples)
   
   for( sample in 1 : nSamples)
     {
@@ -254,6 +259,7 @@ getPeakMatrix<-function(dataFiles, outDirectory, params)
      
      totalPixels=totalPixels+nPixels;
      totalSamples=totalSamples+1;
+     pxSamples[sample]=nPixels;
      hit=TRUE;
      
      fileA=paste0(baseName, "_massRange.bin")
@@ -294,7 +300,7 @@ getPeakMatrix<-function(dataFiles, outDirectory, params)
   massRange=rLoadMassRange(fileA); #mass range to file
 
   #step 2 and 3 (gaussians to centroids). Peak matrix to file _peakMatrix.bin
-  ret=peakMatrixR(baseName, params, massRange[1], massRange[2], totalPixels, totalSamples);
+  ret=peakMatrixR(baseName, params, massRange[1], massRange[2], totalPixels, pxSamples, totalSamples);
   gc() 
   
   data=list("dataFiles"=samples, "outDirectory"=outBaseDir, "params"=params)
@@ -770,9 +776,9 @@ getBasic<-function(data)
 #' @export
 getCentroid<-function(data, mass, sample=1, expand=T)
 {
-  if(sample>length(data$dataFiles))
-  {
-    cat(sprintf("Warning: maxSample=%d\n", length(data$dataFiles)))
+  if(sample>length(data$dataFiles) || sample <1)
+    {
+    cat(sprintf("warning: sample out of limits [%d:%d]\n", 1, length(data$dataFiles)))
     return(0)
   }
   z=unlist(strsplit(basename(data$dataFiles[1]), split = "\\."))[1]
@@ -804,9 +810,9 @@ getPixelsCoordinates<-function(data, sample=1)
   file=paste0(baseName, "_massRange.bin")
   pxSize=rLoadMassRange(file); #[1],[2]=mass range to file, [3].. pxSizes
   nSamples=length(pxSize)-2;
-  if(sample>nSamples)
+  if(sample>nSamples || sample<1)
   {
-    cat(sprintf("Warning: maxSample=%d\n", nSamples))
+    cat(sprintf("warning: sample out of limits [%d:%d]\n", 1, nSamples))
     return(0)
   }
   file=paste0(baseName, "_pixelsCoord.bin")
@@ -830,6 +836,62 @@ saveContext<-function(samples, outBaseDir, params)
   fileA=paste0(data$outDirectory, "data.RData")
   save(data, file=fileA);
 }
+
+#' @name rGetMatrix()
+#' @title returns the intensity matrix associated with a given sample.
+#' 
+#' @param data   -> a list from getPeakMatriz()
+#' @param sample    -> just download the matrix intensity from this sample.
+#' @return a matrix -> row = pixels; column=centroids
+
+getMatrix<-function(data, sample=1)
+{
+  if(sample>length(data$dataFiles) || sample <1)
+  {
+    cat(sprintf("warning: sample out of limits [%d:%d]\n", 1, length(data$dataFiles)))
+    return(0)
+  }
+  z=unlist(strsplit(basename(data$dataFiles[1]), split = "\\."))[1]
+  baseName= paste0(data$outDirectory, z)
+  file=paste0(baseName, "_peakMatrix.bin")
+  ret=rGetMatrix(file, sample-1)
+  return (ret)
+}
+
+#' @name rGetIntensityMatrix()
+#' @title Returns a list containing the intensity matrices associated with each sample.
+#' 
+#' @param data      -> a list from getPeakMatriz()
+#' @param sampleList-> list of samples (numerical values).
+#' @return          -> a list of intensity matrices: row = pixels; column=centroids
+#' @export
+getIntensityMatrix<-function(data, sampleList)
+{
+  sample=list()
+  sampleNames=list()
+  for(i in 1:length(sampleList)) #list of names
+   sampleNames=c(sampleNames, paste0("sample_", i))
+  
+  #file whit data
+  z=unlist(strsplit(basename(data$dataFiles[1]), split = "\\."))[1]
+  baseName= paste0(data$outDirectory, z)
+  file=paste0(baseName, "_peakMatrix.bin")
+  
+  #get intensities matrix
+  for(i in 1:length(sampleList))
+  {
+    if(sampleList[i]>length(data$dataFiles) || sampleList[i] <1)
+    {
+      cat(sprintf("warning: sample out of limits [%d:%d]\n", 1, length(data$dataFiles)))
+      return(0)
+    }
+    sample[[i]]=rGetMatrix(file, sampleList[i]-1)
+  }
+  names(sample)=sampleNames;
+  return (sample)
+}
+
+
 
 #//////////////////////////////////////////////////////////////
 #' uuid.
