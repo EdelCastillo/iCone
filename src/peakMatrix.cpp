@@ -800,14 +800,20 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
           int px=px_p[iMass]; //pixel of the Gaussian.
           tmpPx_p[k]=px;
           tmpMassIdx_p[k]=iMass;
+          
+//          pxIntensity=intensity_p[tmpMassIdx_p[k]];
+//          fp.write((char*)&px, sizeof(int)); //px 
+//          fp.write((char*)&pxIntensity, sizeof(double)); //px intensity
+//          ionSize++;
         }
         //Puede que dentro de un mismo bin exista más de una gaussiana para el mismo pixel
         //se genera una intensidad representativa
         common.sortUpI(tmpPx_p, tmpPxIndex_p, m_centersSize_p[nIons]); //increasing ordering of pixeles.
         bool into=false;
         int first=-1, last=-1;
+        //for(int k=0; k<0; k++) //para todas las masas del bin
         for(int k=0; k<m_centersSize_p[nIons]-1; k++) //para todas las masas del bin
-        {
+          {
           int px=tmpPx_p[tmpPxIndex_p[k]]; //px asociado a 
           if(px==tmpPx_p[tmpPxIndex_p[k+1]&& into==false]) 
             {into=true; first=k; last=-1; }
@@ -824,7 +830,8 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
               if(m_intMethod==MEAN) //mean  
               {
                 for(int j=first; j<=last; j++)
-                  pxIntensity+=intensity_p[tmpMassIdx_p[j]];
+                  pxIntensity+=intensity_p[tmpPxIndex_p[j]];
+                //pxIntensity+=intensity_p[tmpMassIdx_p[j]];
                
                 pxIntensity/=(last-first+1);
               }
@@ -833,7 +840,8 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
                 double intValue=0;
                 for(int j=first; j<=last; j++)
                 {
-                  intValue=intensity_p[tmpMassIdx_p[j]];
+                  intValue=intensity_p[tmpPxIndex_p[j]];
+                  //intValue=intensity_p[tmpMassIdx_p[j]];
                   if(intValue>pxIntensity) pxIntensity=intValue; 
                 }
               }
@@ -846,7 +854,9 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
            
             else //px difieren
             {
+              px=tmpPx_p[k];
               pxIntensity=intensity_p[tmpMassIdx_p[k]];
+              //pxIntensity=intensity_p[tmpMassIdx_p[tmpPx_p[tmpPxIndex_p[k]]]];
               fp.write((char*)&px, sizeof(int)); //px 
               fp.write((char*)&pxIntensity, sizeof(double)); //px intensity
               ionSize++;
@@ -854,7 +864,7 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
           }
           
         }
-        
+
           //save info to disk
           finalPos=fp.tellg();
           if(m_intMethod==MAX)
