@@ -865,7 +865,7 @@ getMatrix<-function(data, sample=1)
 #' @param sampleList-> list of samples (numerical values).
 #' @return          -> a list of intensity matrices: row = pixels; column=centroids
 #' @export
-getIntensityMatrix<-function(data, sampleList)
+getIntensityMatrix<-function(data, sampleList=c(1))
 {
   sample=list()
   sampleNames=list()

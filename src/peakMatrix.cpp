@@ -605,9 +605,12 @@ int PeakMatrix::getCentroids()
   double *mass_p=new double[nCenters];
   int *px_p=new int[nCenters];
   double *intensity_p=new double[nCenters];
+  
+  //gaussians to vectors
   nCenters=getCentroidsIntoRange(mass_p, px_p, intensity_p, nCenters);
   
   double deltaMass=m_mzLow/(m_massResolution); //delta=1/2 of the minimum mass increment of the spectrometer
+
   int massAxisSize; 
   massAxisSize=nCenters;
   
@@ -615,12 +618,13 @@ int PeakMatrix::getCentroids()
   
   m_centers_p=new double[massAxisSize];
   m_centersSize_p=new int[massAxisSize];
-
+  
+  //get all centroids (binning)
   m_nCentroids=centers(mass_p, px_p, intensity_p, nCenters, tolerance);
   
-  if(px_p) delete [] px_p;
+  if(mass_p)      delete [] mass_p;
+  if(px_p)        delete [] px_p;
   if(intensity_p) delete [] intensity_p;
-  delete mass_p;
   return m_nCentroids;
 }
 
@@ -742,8 +746,7 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
   
   int *tmpPx_p=new int[size];
   int *tmpPxIndex_p=new int[size];
-  int *tmpMassIdx_p=new int[size];
-  
+
   Common common;
   common.sortUp(mass_p, sortedIndex_p, size); //increasing ordering of masses.
 
@@ -751,7 +754,8 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
 
   m_centersSize_p[0]=1;
   massIndex_p[0]=sortedIndex_p[0];
-  double segmentSize=m_centers_p[0]*tolerance/1e6, centroidTolerance;
+  double segmentSize=m_centers_p[0]*tolerance/1e6;
+  double centroidTolerance;
 
   int nIons=0, ionSize=0, mi=0;
   double massDiff;
@@ -778,7 +782,6 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
         //Analysis of centroid average intensity and dispersion.
         double intensity=0, dispersion=0, pxIntensity;
         int iMass;
-
         for(int j=0; j<m_centersSize_p[nIons]; j++)
         {
           iMass=massIndex_p[j];
@@ -799,27 +802,22 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
           iMass=massIndex_p[k];
           int px=px_p[iMass]; //pixel of the Gaussian.
           tmpPx_p[k]=px;
-          tmpMassIdx_p[k]=iMass;
-          
-//          pxIntensity=intensity_p[tmpMassIdx_p[k]];
-//          fp.write((char*)&px, sizeof(int)); //px 
-//          fp.write((char*)&pxIntensity, sizeof(double)); //px intensity
-//          ionSize++;
         }
         //Puede que dentro de un mismo bin exista más de una gaussiana para el mismo pixel
         //se genera una intensidad representativa
         common.sortUpI(tmpPx_p, tmpPxIndex_p, m_centersSize_p[nIons]); //increasing ordering of pixeles.
         bool into=false;
         int first=-1, last=-1;
-        //for(int k=0; k<0; k++) //para todas las masas del bin
         for(int k=0; k<m_centersSize_p[nIons]-1; k++) //para todas las masas del bin
-          {
+        {
           int px=tmpPx_p[tmpPxIndex_p[k]]; //px asociado a 
-          if(px==tmpPx_p[tmpPxIndex_p[k+1]&& into==false]) 
-            {into=true; first=k; last=-1; }
-          else if(px!=tmpPx_p[tmpPxIndex_p[k+1]&& into==true]) 
+          if(px==tmpPx_p[tmpPxIndex_p[k+1]]&& into==false) 
+            {into=true; first=k; last=-1;}
+          if(into==true && px!=tmpPx_p[tmpPxIndex_p[k+1]])
             {into=false; last=k;}
-          
+          if(into==true && k+2==m_centersSize_p[nIons])
+            {into=false; last=k+1;}
+
           if(into==false)
           {
            double pxIntensity=0;
@@ -830,18 +828,23 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
               if(m_intMethod==MEAN) //mean  
               {
                 for(int j=first; j<=last; j++)
-                  pxIntensity+=intensity_p[tmpPxIndex_p[j]];
-                //pxIntensity+=intensity_p[tmpMassIdx_p[j]];
-               
+                {
+                  int pxIdx_a=tmpPxIndex_p[j];
+                  int pxIdx_b=massIndex_p[pxIdx_a];
+                  pxIntensity+=intensity_p[pxIdx_b];
+                }
+                             
                 pxIntensity/=(last-first+1);
               }
               else if(m_intMethod==MAX) //max value
               {
-                double intValue=0;
+                double intValue;
+                pxIntensity=0;
                 for(int j=first; j<=last; j++)
                 {
-                  intValue=intensity_p[tmpPxIndex_p[j]];
-                  //intValue=intensity_p[tmpMassIdx_p[j]];
+                  int pxIdx_a=tmpPxIndex_p[j];
+                  int pxIdx_b=massIndex_p[pxIdx_a];
+                  intValue=intensity_p[pxIdx_b];
                   if(intValue>pxIntensity) pxIntensity=intValue; 
                 }
               }
@@ -855,8 +858,7 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
             else //px difieren
             {
               px=tmpPx_p[k];
-              pxIntensity=intensity_p[tmpMassIdx_p[k]];
-              //pxIntensity=intensity_p[tmpMassIdx_p[tmpPx_p[tmpPxIndex_p[k]]]];
+              pxIntensity=intensity_p[massIndex_p[k]];
               fp.write((char*)&px, sizeof(int)); //px 
               fp.write((char*)&pxIntensity, sizeof(double)); //px intensity
               ionSize++;
@@ -864,7 +866,6 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
           }
           
         }
-
           //save info to disk
           finalPos=fp.tellg();
           if(m_intMethod==MAX)
@@ -903,7 +904,7 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
            
   }
   printf("100\n");
-  printf("\nNumber of Gaussians in the same pixel within a bin=%d; relative to centroids(%%)=%.2f\n", repesCount, (double)repesCount*100/nIons);
+  printf("\nTotal number of Gaussians in the same pixel within a bin=%d; \n", repesCount);
   printf("Total centroids:%d\n", nIons);
   fp.seekg(sizeof(int), std::ios_base::beg);
   fp.write((char*)&m_totalPixels, sizeof(int));
@@ -914,7 +915,6 @@ int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size
   if(massIndex_p)   delete [] massIndex_p;
   if(tmpPx_p)       delete [] tmpPx_p;
   if(tmpPxIndex_p)  delete [] tmpPxIndex_p;
-  if(tmpMassIdx_p)  delete [] tmpMassIdx_p;
   m_nIons=nIons;
   
   return nIons;

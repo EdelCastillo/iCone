@@ -5,7 +5,7 @@
 \alias{getIntensityMatrix}
 \title{Returns a list containing the intensity matrices associated with each sample.}
 \usage{
-getIntensityMatrix(data, sampleList)
+getIntensityMatrix(data, sampleList = c(1))
 }
 \arguments{
 \item{data}{-> a list from getPeakMatriz()}
