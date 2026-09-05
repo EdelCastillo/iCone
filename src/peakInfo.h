@@ -30,7 +30,7 @@ class IntensityPeak
 {
     public:
         //Constructor: initialization
-        IntensityPeak(double SNR);
+        IntensityPeak(double SNR, bool unitedPeak=true);
 
         //destructor: frees reserved memory.
         ~IntensityPeak();
@@ -74,6 +74,7 @@ class IntensityPeak
 
         Peak           *m_intPeak_p;  //pointer to Peak class for magnitude.
         int             m_nUnitedPeak; //number of entries in m_unitedPeak_p.
+        bool            m_unitedPeak; //true if connected peaks are considered.
         PEAK_LIST       m_peakList;
         int             m_nIntPeak;
         double           m_SNR;

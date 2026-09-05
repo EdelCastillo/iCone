@@ -86,16 +86,16 @@ rPlotGaussianSpectrum<-function(drawInfo, minMass=0, maxMass=0, sum=TRUE)
   if(length(intensity)>1)
     lines(mass, intensity, type="p",col="blue",lwd=1)
   
-  deltaX<-minSigma/10; #5 points fit within the lowest sigma (resolution in X).
-  if(deltaX<1e-6) deltaX=1e-6;
-  
-  X<-seq(minX, maxX, deltaX); # X axis.
+
   for(i in 1 : nGauss)
     {
     mean =gMean[i]; #gaussians parameters
     sigma=gSigma[i];
     value=gInt[i];
-      
+    deltaX<-sigma/6; #5 points fit within the lowest sigma (resolution in X).
+    if(deltaX<1e-6) deltaX=1e-6;
+    X<-seq(minX, maxX, deltaX); # X axis.
+    
     Y=value*exp(-((X-mean)^2)/(2*(sigma^2))); #magnitude of the current Gaussian.
     totalY=totalY+Y; #the sum is updated.
     color=((i-1)%%8)+1;

@@ -45,12 +45,13 @@ public:
   
   //Constructor
   //captures input information, allocates memory and initializes.
-  RawToGaussians(char *baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params,  Rcpp::NumericVector pxList, double mzLow=0, double mzHigh=0, int nThreads=0);
+  RawToGaussians(char *baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params,  Rcpp::NumericVector pxList, 
+                 double mzLow=0, double mzHigh=0, int nThreads=0);
   
   // Saves the Gaussian data to the given file
   // Adds it to any existing data
   // Returns false if failed 
-  bool saveGaussians(char *fileName, GAUSS_SP *gauss_p);
+  int saveGaussians(char *fileName, GAUSS_SP *gauss_p);
   
   //Save the coordinate (XY) information of each pixel of m_pxList[] to the fileName file.
   //It is added to any existing data.
@@ -154,6 +155,7 @@ private:
   int           m_SNRmethod;
   NoiseEstimation *m_noiseEst_p; 
   double *Z;
+  PeakMethod         m_peakMethod;
 }; 
 
 #endif

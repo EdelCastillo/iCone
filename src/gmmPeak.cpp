@@ -143,7 +143,7 @@ int GmmPeak::iniGMM()
     nGauss=0; //num of gausianas
     int iCount=-1;
     m_nDeconv=0;
-    
+//printf("...%d %d\n", lowPeakIndex, highPeakIndex);    
     //in each single magnitude peak there may be several entropy peak, or none.
     //are made to fit within the limits of the peak magnitude
     for(int peak=lowPeakIndex; peak<=highPeakIndex; peak++)
@@ -182,8 +182,9 @@ int GmmPeak::iniGMM()
         m_sGmm.limits[nGauss].maxWeight=1.0;
         m_etpHits=1;
         nGauss++;
+//        printf("%d\n", nGauss);
         m_nDeconv++;
-        if(nGauss>=DECONV_MAX_GAUSSIAN) return -2;
+        if(nGauss>DECONV_MAX_GAUSSIAN) return -2;
         }
     m_sGmm.maxIter=nGauss*40; //maximum iterations for adjustment in GMM
     return nGauss; //number of Gaussians that will make up the peak magnitude
@@ -296,7 +297,7 @@ void GmmPeak::gaussConversion(GAUSSIAN *deconvIn_p, GAUSSIAN *deconvOut_p, doubl
   mean=deconvIn_p->mean;
   tmp=(int)deconvIn_p->mean; //lower integer value.
   //If tmp is very large, it may become negative when truncated to integer.
-  
+//printf("... %.3f %d %d\n",mean, tmp, mzAxisSize);  
   //interval in Daltons between two consecutive neighboring scans of mean.
   if(tmp < mzAxisSize-1 && tmp>0) //if it is within range.
   {

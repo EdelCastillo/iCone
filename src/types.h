@@ -29,6 +29,8 @@
 #define MEAN 0
 #define MAX  1
 
+  enum PeakMethod{uGaussians, iGaussians, derivative};
+ 
     typedef struct{
         int x, y;
     }PIXEL_XY;                  //2D pixel

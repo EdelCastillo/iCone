@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#define DECONV_MAX_GAUSSIAN 100
+#define DECONV_MAX_GAUSSIAN 10  //>=3
 
 typedef struct{                 //deconvolution overview for a compound magnitude peak
     double

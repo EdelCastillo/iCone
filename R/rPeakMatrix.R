@@ -32,9 +32,10 @@
 #'              initMass: initial mass to consider. By default, the minimum value from the entire range of masses is used.
 #'             finalMass: final   mass to consider. By default, the maximum value from the entire range of masses is used.
 #'                pxList: list of pixels. First pixel=1. By default everyone.
+#'            peakMethod: algorithm for shaping the peaks: uGaussians (defect), iGaussians, derivative (u=united, i=isolated)
+#'             intMethod: intensity values for the binning stage: mean (defect), max
 #'              nThreads: number of threads for parallel processing (by default maxCores-1)
-#'             intMethod: intensity values for the binning stage: mean, max
-#'         imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
+#'         imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenience with really big files.
 #'         fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 #'
 #' @return a list with the input parameters 
@@ -60,7 +61,7 @@ getPeakMatrix<-function(dataFiles, params, outDirectory)
   if(missing(params))
   {
     params=list("SNR"=3, "tolerance"=16, "minPixelsSupport"=5, "noiseMethod"="estnoise_mad", "initMass"=0, "finalMass"=0,
-                "pxList"=c(), "nThreads"=0, "intMethod"="mean", "imzMLChecksum"=F, "fixBrokenUUID"=F)
+                "pxList"=c(), "nThreads"=0, "intMethod"="mean", "peakMethod"="uGaussians", "imzMLChecksum"=F, "fixBrokenUUID"=F)
             
   }
   
@@ -110,6 +111,9 @@ getPeakMatrix<-function(dataFiles, params, outDirectory)
   if(!(exists("intMethod", where=params)))
     params=c(params, "intMethod"="mean")
 
+  if(!(exists("peakMethod", where=params)))
+    params=c(params, "peakMethod"="uGaussians")
+  
   if(!(exists("imzMLChecksum", where=params)))
     params=c(params, "imzMLChecksum"=F)
   
@@ -254,9 +258,10 @@ getPeakMatrix<-function(dataFiles, params, outDirectory)
         cat("warning: the lower mass exceeds the upper mass.\n")
         return(0)
       }
+
      #imzML file to Gaussians (for each sample).
      nPixels=rawToGaussiansR(baseName, file, in_img$data$imzML, params, lowMz, highMz, params$pxList-1, nThreads);
-     
+    
      totalPixels=totalPixels+nPixels;
      totalSamples=totalSamples+1;
      pxSamples[sample]=nPixels;

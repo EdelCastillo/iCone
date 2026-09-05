@@ -36,8 +36,8 @@ int Cgmm::gmm(GMM_STRUCT *gmm)
     double L=1.0, Lold;         //likelihood
 
     //memory to hold partial results
-    double newMean[DECONV_MAX_GAUSSIAN], newSigma[DECONV_MAX_GAUSSIAN], newWeight[DECONV_MAX_GAUSSIAN];
-    double  *pxk_p[DECONV_MAX_GAUSSIAN];
+    double newMean[DECONV_MAX_GAUSSIAN+1], newSigma[DECONV_MAX_GAUSSIAN+1], newWeight[DECONV_MAX_GAUSSIAN+1];
+    double  *pxk_p[DECONV_MAX_GAUSSIAN+1];
 
     //memory reservation and initialization
     double *sumaPxp_p=0;

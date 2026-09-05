@@ -21,12 +21,13 @@
 #include "peakInfo.h"
 
 //Constructor: initialization
-IntensityPeak::IntensityPeak(double SNR)
+IntensityPeak::IntensityPeak(double SNR, bool unitedPeak)
 {
     m_SNR=SNR;
     m_peakList.intPeak_p=0;
     m_peakList.uPeak_p=0;
     m_intPeak_p=0;
+    m_unitedPeak=unitedPeak;
 }
 
 //destructor: free reserved memory
@@ -94,11 +95,14 @@ int IntensityPeak::unitedPeak(PEAK_LIST *peakList_p, SPECTRO *spectro_p)
     int nUPeak=0, nIntPeak=peakList_p->nIntPeak;
     bool hit;
     int iPeak=0;
+
     while(true)
         {
-        //if the index is less than the maximum and is linked to the next peak
-      if(iPeak<(nIntPeak-1) && (peakList_p->intPeak_p[iPeak].high==peakList_p->intPeak_p[iPeak+1].low) &&
-           spectro_p->SNR_p[peakList_p->intPeak_p[iPeak].high]>m_SNR)
+
+      //if the index is less than the maximum and is linked to the next peak
+      if(m_unitedPeak && iPeak<(nIntPeak-1) && (peakList_p->intPeak_p[iPeak].high==peakList_p->intPeak_p[iPeak+1].low) &&
+           spectro_p->SNR_p[peakList_p->intPeak_p[iPeak].high]>m_SNR 
+           && peakList_p->uPeak_p[nUPeak].peakHigh - peakList_p->uPeak_p[nUPeak].peakLow +1 < DECONV_MAX_GAUSSIAN)
             {
           //se toma nota
             peakList_p->uPeak_p[nUPeak].peakLow =iPeak;
@@ -108,9 +112,13 @@ int IntensityPeak::unitedPeak(PEAK_LIST *peakList_p, SPECTRO *spectro_p)
             hit=false;
             while(true)
                 {
+              //if(peakList_p->uPeak_p[nUPeak].peakHigh-peakList_p->uPeak_p[nUPeak].peakLow>=DECONV_MAX_GAUSSIAN-2) 
+              //  printf(".. %d %d\n", peakList_p->uPeak_p[nUPeak].peakHigh, peakList_p->uPeak_p[nUPeak].peakLow);
+              
               //if the index is less than the maximum and is linked to the next peak.
                 if(iPeak<(nIntPeak-1) && (peakList_p->intPeak_p[iPeak].high==peakList_p->intPeak_p[iPeak+1].low) &&
-                   spectro_p->SNR_p[peakList_p->intPeak_p[iPeak].high]>m_SNR)
+                   spectro_p->SNR_p[peakList_p->intPeak_p[iPeak].high]>m_SNR
+                     && peakList_p->uPeak_p[nUPeak].peakHigh - peakList_p->uPeak_p[nUPeak].peakLow +1 < DECONV_MAX_GAUSSIAN)
                     {
                   //the end of the joint peak is updated.
                     peakList_p->uPeak_p[nUPeak].peakHigh=iPeak+1;
@@ -119,7 +127,7 @@ int IntensityPeak::unitedPeak(PEAK_LIST *peakList_p, SPECTRO *spectro_p)
                 //If you have reached the last peak and it is linked to the previous one: end.
                 else if(iPeak>=(nIntPeak-1))
                     {
-                  iPeak++; nUPeak++;
+                    iPeak++; nUPeak++;
                     hit=true;
                     break;
                     }

@@ -37,7 +37,6 @@
  //'          tolerance: desired tolerance for the centroids (ppm)
  //'      "noiseMethod": method for estimating noise.
  //' "minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered.
- //'      "linkedPeaks": two peaks are considered linked if they are closer than the given standard deviation (by defect=3).   
  //'  @param mzLow:    lower mass to consider
  //'  @param mzHigh:   higher mass to consider
  //'  @param pxList:   list of pixels. First pixel=1. By default everyone.
@@ -50,10 +49,10 @@
    gPeakCount=0, gSpectra=0;
    char *directory=new char[200];
    strcpy(directory, (char*)baseDir.get_cstring());
-   
+  
    RawToGaussians pMatrix(directory, ibdFname, imzML, params, pxList, mzLow, mzHigh, nThreads);
    if(pMatrix.m_hit==false) return 0;
-   
+
    //Phase 1:
    //loads data from a file and converts its peak into Gaussians.
    int ret1=pMatrix.rawToGaussians(); //parallel processing
@@ -67,7 +66,8 @@
    strcpy(fileName, (char*)baseDir.get_cstring());
    strcat(fileName, (char*)"_gaussians.bin");
    
-   bool hit=pMatrix.saveGaussians(fileName, pMatrix.m_gaussians_p);
+   int nPeaks=pMatrix.saveGaussians(fileName, pMatrix.m_gaussians_p);
+   printf("\t\t\ttotal peaks in the samples: %d\n", nPeaks);
    delete []fileName;
    return pMatrix.m_NPixels;
  }
@@ -328,14 +328,14 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
    char fileName[200];
    common.getFileNameDirectory(path, fileName);
    CharacterVector vect=fileName;//(strlen(fileName));
-//   for(int i=0; i<strlen(fileName); i++) vect[i]=fileName[i]
   return vect;
  }
  
  //Constructor
  //captures input information, allocates memory and initializes.
  ////////////////////////////////////////////////////////////////////////////////
- RawToGaussians::RawToGaussians(char *baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params, Rcpp::NumericVector pxList, double mzLow, double mzHigh, int nThreads)
+ RawToGaussians::RawToGaussians(char *baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params, 
+                    Rcpp::NumericVector pxList, double mzLow, double mzHigh, int nThreads)
  {
    m_hit=true;
    m_mzLow=mzLow;
@@ -361,7 +361,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
    CharacterVector cv;
    m_pxMax=df.nrows()-1;
    m_pxMin=0;
-   
+  
    if(pxList.size()==1 && pxList[0]==-1) //by defect, all pixels
    {
      m_NPixels=df.nrows();
@@ -413,9 +413,16 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
 
    nv=params["minPixelsSupport"];
    m_pxSupport=nv[0]*m_NPixels/100.0;
+
+   cv=params["peakMethod"];
+   String tmpStr=cv[0];
+   const char* peakMethod=tmpStr.get_cstring(); //conversion C
+   if (strcmp(peakMethod, "uGaussians")==0) {m_peakMethod=PeakMethod::uGaussians;}
+   if (strcmp(peakMethod, "iGaussians")==0) {m_peakMethod=PeakMethod::iGaussians;}
+   if (strcmp(peakMethod, "derivative")==0) {m_peakMethod=PeakMethod::derivative;}
    
    cv=params["noiseMethod"];
-   String tmpStr=cv[0];
+   tmpStr=cv[0];
    const char* SNRmethod=tmpStr.get_cstring(); //conversion C
    
    if     (strcmp(SNRmethod, "estnoise_diff")==0) {m_SNRmethod=1; }
@@ -488,7 +495,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
      m_spectro[i].mutexOut_p =new std::mutex;
      m_spectro[i].size=0;
      m_spectro[i].mutexIn_p ->lock();
-     m_spectro[i].mutexOut_p->lock();
+     m_spectro[i].mutexOut_p->unlock();
      m_spectro[i].thread_p=new std::thread(&RawToGaussians::mtGetGaussians, this, i);
 
    }
@@ -514,7 +521,6 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
  //free reserved memory
  RawToGaussians::~RawToGaussians()
  {
-   return;
 //   printf("init peakMatrix destructor\n");
    if(m_gaussians_p)
    {
@@ -584,7 +590,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
  /////////////////////////////////////////////////////////////////////////////////////////////
  int RawToGaussians::rawToGaussians()
  {
-   printf("Processing \n\tphase 1:\traw to gaussians(%%): 00 ");
+   printf("Processing \n\tphase 1:   raw to gaussians(%%): 00 ");
    int vez=1;
    Common common;
    int spSize=0;
@@ -600,33 +606,39 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
      //indication of the progress of the process (10% tolerance)
      if((double)iPx/(double)m_NPixels>vez*0.1) {if(vez<10) printf("%d ", vez*10); vez++;}
      if(iPx==m_NPixels) break;
-     
      //We load as many spectra as threads are used.
      //Each spectrum is processed by a thread.
-     hit=true;
-     int nThr=0;
+     for(int thr=0; thr<m_nThreads && iPx<m_NPixels; thr++) //for each thread
+     {
+         if(m_spectro[thr].mutexOut_p->try_lock()) //if this thread is free
+         {
+           while(iPx<m_NPixels) //iterates while the spectrum has length <=2 (eliminates empty spectra).
+           {
+             spSize=getRawInfo(iPx, thr);//capturing spectra from imzML file
+            if(spSize>2) break;//spectrum for analysis. There is no information of interest in the pixel spectrum <=3 peak.
+            else
+              iPx++;
+           }
+           if(spSize>2 && iPx<m_NPixels) 
+           m_spectro[thr].mutexIn_p->unlock(); //This thread is allowed to run.
+           iPx++;
+         }
+     }
+     //wait the conclusion
+     while(true)  
+    {
+      hit=false;
      for(int thr=0; thr<m_nThreads; thr++) //for each thread
      {
-       
-       while(iPx<m_NPixels) //iterates while the spectrum has length <=2 (eliminates empty spectra).
-       {
-         spSize=getRawInfo(iPx, thr);//capturing spectra from imzML file
-         iPx++;
-         //If the spectrum size <=2 its peak are not processed.
-         if(spSize>2) break;//spectrum for analysis. There is no information of interest in the pixel spectrum <=3 peak.
-       }
-       if(spSize>2 && iPx<=m_NPixels) 
-       {
-         
-         nThr++;
-         {m_spectro[thr].mutexIn_p->unlock();} //This thread is allowed to run.
-       }
+       if(m_spectro[thr].mutexOut_p->try_lock()) //if it was free
+         m_spectro[thr].mutexOut_p->unlock(); 
+       else 
+         hit=true; 
      }
-     //wait for the conclusion of all threads.
-     for(int thr=0; thr<nThr; thr++) //for each thread
-     {
-       m_spectro[thr].mutexOut_p->lock();
-     }
+      if(!hit) break;
+    }
+
+     //error control
      int tmp=0;
      gMutex.lock();
      tmp=gError; //error count
@@ -635,10 +647,13 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
      {
        printf("Application aborted because there are too many warnings. It is suggested to increase the SNR parameter.\n"); 
        //thread removal
-       m_enable=false; //threads end.
        for(int thr=0; thr<m_nThreads; thr++) //are unlocked for the conclusion.
+       {
          m_spectro[thr].mutexIn_p->unlock();
+         m_spectro[thr].mutexOut_p->unlock();
+       }
        
+       m_enable=false; //threads end.
        for(int i=0; i<m_nThreads; i++)
        {
          m_spectro[i].thread_p->join();
@@ -646,14 +661,14 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
        }
        return -1;
      }
-   }
+   }  
    //maximum amount of Gaussians in the spectra.
    for(int px=0; px<m_NPixels; px++)//for all pixels
    {
      if(m_gaussians_p[px].gauss_p && m_gaussians_p[px].size>m_maxPxGaussians) 
        m_maxPxGaussians=m_gaussians_p[px].size;
    }
-   
+//   std::this_thread::sleep_for(std::chrono::milliseconds(500));   
    //mass range of interest
    MASS_RANGE mRange;
    mRange.low=m_mzLow;
@@ -710,13 +725,16 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
    GAUSS_PARAMS *gaussians_p=0;
    double *centroids_p=0;
    int *centroidsIndex_p=0;
+   bool unitedPeak=true;
+   if(m_peakMethod == PeakMethod::iGaussians) unitedPeak=false;
+   
    //  m_spectro[spIndex].mutexOut_p->unlock(); //end of spectrum processing.
    while(m_enable)
    {
      m_spectro[spIndex].mutexIn_p->lock(); //permission to continue (synchro)
      if(!m_enable) break; //The signal can be activated while waiting.
      
-     IntensityPeak intPeak(m_SNR); //peak class
+     IntensityPeak intPeak(m_SNR, unitedPeak); //peak class
      
      //Spectrum conditioning.
      //Full spectra are received and only part of it may be of interest.
@@ -755,10 +773,12 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
      //conversion to Gaussians.
 
      if(!m_enable) //end of thread?
-     {m_spectro[spIndex].mutexOut_p->unlock(); return 0;}
+     {m_spectro[spIndex].mutexOut_p->unlock(); 
+       return 0;}
      int nPeak;
      //the peak are extracted from the spectrum (they are delimited by their indices).
      nPeak=intPeak.getPeakList(&m_spectro[spIndex]);
+//printf("..> %d\n", nPeak);
      if(nPeak>0)
      {
        gMutex.lock();
@@ -866,7 +886,8 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
    
    int gaussIndex=0; //indices for each Gaussian.
    int nUPeak=m_peakFG_p[px].peakUsize; //#united peak
-   
+   bool hit;
+
    //memory for predictable Gaussians.
    m_gaussians_p[px].gauss_p=new GAUSS_PARAMS[m_peakFG_p[px].peakFsize];
 
@@ -880,62 +901,86 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
      int mzSize=highMzIndex-lowMzIndex+1;
      
      int nPeak=mPeakHigh-mPeakLow+1; //number of simple peak into united peak.
-     
+// printf("..2> %d\n", nPeak);
+     //printf("->[%d]%d/%d %d/%d\n", uPeak, mPeakLow, mPeakHigh, lowMzIndex, highMzIndex);     
      //The information of simple peak of magnitude that make up the segment is established.
-     gmmPeak.setPeak(&m_peakFG_p[px].peakF_p[mPeakLow], nPeak); 
-     
-     //The magnitude information that must be adjusted is established.
-     GROUP_F pxMag;
-     pxMag.set=intSpectrum_p+lowMzIndex; 
-     pxMag.size=mzSize;
-     gmmPeak.setMagnitudes(&pxMag); //magnitude peak.
-     
-     //The simple Gaussians are formed whose sum reproduces the magnitude peak.
-     int ret=gmmPeak.gmmDeconvolution(); //deconvolution
-     if(ret==-1) //posible intensidad del espectro demasiado baja
-       return -1;
-     if(ret==-2)
+     if(m_peakMethod==PeakMethod::uGaussians || m_peakMethod==PeakMethod::iGaussians) //united gaussians mode
      {
-       gMutex.lock();
-       printf("\nWarning: limits exceeded in pixel %4d. The aim is to deconvolve a mass segment composed of more than %d Gaussians.\n", spectro_p->pixel, DECONV_MAX_GAUSSIAN);
-       gError++; //error count
-       gMutex.unlock();
-       return -2;
-     }
-     if(intSize<mzSize) //if the dimensions are not correct.
-     {
-       //warning: the dimensions of mzAxis and data[magnitudes] must match. 
-       printf("Warning, match error detected in pixel %d. \n", spectro_p->pixel);
-       return -1;
-     }
-     
-     int nGauss=gmmPeak.getDeconvNumber(); //# gaussians
-
-     bool hit=true;
-     GAUSSIAN gaussIn, gaussOut; //if it is required to adapt the mass axis.
-     for(int g=0; g<nGauss; g++)
-     {
-       gaussIn=gmmPeak.getDeconv(g); //get a gaussian.
+       gmmPeak.setPeak(&m_peakFG_p[px].peakF_p[mPeakLow], nPeak); 
        
-       //unit conversion (scans to Daltos).
-       gmmPeak.gaussConversion(&gaussIn, &gaussOut, massSpectrum_p+lowMzIndex, mzSize); 
+       //The magnitude information that must be adjusted is established.
+       GROUP_F pxMag;
+       pxMag.set=intSpectrum_p+lowMzIndex; 
+       pxMag.size=mzSize;
+       gmmPeak.setMagnitudes(&pxMag); //magnitude peak.
        
-       if(gaussIndex>=m_peakFG_p[px].peakFsize) //control de error
+       //The simple Gaussians are formed whose sum reproduces the magnitude peak.
+       int ret=gmmPeak.gmmDeconvolution(); //deconvolution
+       if(ret==-1) //posible intensidad del espectro demasiado baja
+         return -1;
+       if(ret==-2)
        {
-         //warning: memory overflow for gaussians 
-         printf("warning: memory overflow for gaussians %d/%d\n", gaussIndex, m_peakFG_p[px].peakFsize); 
-         hit=false; break;
+         gMutex.lock();
+         printf("\nWarning: limits exceeded in pixel %4d. The aim is to deconvolve a mass segment composed of more than %d Gaussians.\n", spectro_p->pixel, DECONV_MAX_GAUSSIAN);
+         gError++; //error count
+         gMutex.unlock();
+         return -2;
+       }
+       if(intSize<mzSize) //if the dimensions are not correct.
+       {
+         //warning: the dimensions of mzAxis and data[magnitudes] must match. 
+         printf("Warning, match error detected in pixel %d. \n", spectro_p->pixel);
+         return -1;
        }
        
-       //the Gaussians are saved.
-       gaussians_p[gaussIndex].mean  =(double)gaussOut.mean;
-       gaussians_p[gaussIndex].sigma =(double)gaussOut.sigma;
-       gaussians_p[gaussIndex].weight=(double)gaussOut.yFactor*gaussOut.weight;
-       gaussIndex++;
-     }//end of gaussians
-     
+       int nGauss=gmmPeak.getDeconvNumber(); //# gaussians
+  
+       hit=true;
+       GAUSSIAN gaussIn, gaussOut; //if it is required to adapt the mass axis.
+       for(int g=0; g<nGauss; g++)
+       {
+         gaussIn=gmmPeak.getDeconv(g); //get a gaussian.
+         
+         //unit conversion (scans to Daltos).
+         gmmPeak.gaussConversion(&gaussIn, &gaussOut, massSpectrum_p+lowMzIndex, mzSize); 
+         
+         if(gaussIndex>=m_peakFG_p[px].peakFsize) //control de error
+         {
+           //warning: memory overflow for gaussians 
+           printf("warning: memory overflow for gaussians %d/%d\n", gaussIndex, m_peakFG_p[px].peakFsize); 
+           hit=false; break;
+         }
+         
+         //the Gaussians are saved.
+         gaussians_p[gaussIndex].mean  =(double)gaussOut.mean;
+         gaussians_p[gaussIndex].sigma =(double)gaussOut.sigma;
+         gaussians_p[gaussIndex].weight=(double)gaussOut.yFactor*gaussOut.weight;
+         gaussIndex++;
+       }//end of gaussians
+     } 
+      else if(m_peakMethod==PeakMethod::derivative) //derivative
+      {
+        hit=true;
+        GAUSSIAN gaussIn, gaussOut; //if it is required to adapt the mass axis.
+
+        for(int pk=0; pk<nPeak; pk++)
+        {
+          gaussIn.mean  =(double) m_peakFG_p[px].peakF_p[mPeakLow+pk].max-lowMzIndex ;
+          gaussIn.sigma =(double)(m_peakFG_p[px].peakF_p[mPeakLow+pk].high-m_peakFG_p[px].peakF_p[mPeakLow+pk].low+1);
+          gaussIn.weight=(double)spectro_p->int_p[m_peakFG_p[px].peakF_p[mPeakLow+pk].max];
+          gaussIn.yFactor=1.0;
+
+          gmmPeak.gaussConversion(&gaussIn, &gaussOut, massSpectrum_p+lowMzIndex, mzSize); 
+
+          gaussians_p[gaussIndex].mean  =(double)gaussOut.mean;
+          gaussians_p[gaussIndex].sigma =(double)gaussOut.sigma;
+          gaussians_p[gaussIndex].weight=(double)gaussOut.yFactor*gaussOut.weight;
+          gaussIndex++;
+        }
+      }
      if(hit==false) break;//fallo
-   }//end uPeak loop
+   } //end uPeak loop
+//   printf("..2> %d\n", gaussIndex);
    return gaussIndex; //# gaussians
  }
  
@@ -1104,12 +1149,12 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
  // Saves the Gaussian data to the given file
  // Saves all pixels, including those without content.
  // Adds it to any existing data
- // Returns false if failed 
- bool RawToGaussians::saveGaussians(char *fileName, GAUSS_SP *gauss_p)
+ // Returns the number of gaussians 
+ int RawToGaussians::saveGaussians(char *fileName, GAUSS_SP *gauss_p)
  {
    std::fstream fp;
    bool hit=true;
-   Common tools;
+  int count=0;
    char txt[200];
    int size=0;
    
@@ -1129,6 +1174,8 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
      if(gauss_p[px].gauss_p)
       {
        fp.write((char*)&gauss_p[px].size, sizeof(int));
+        count+=gauss_p[px].size;
+  
        fp.write((char*) gauss_p[px].gauss_p, gauss_p[px].size*gaussSize );
        if(fp.fail() || fp.bad()) //control de errores
         {
@@ -1144,7 +1191,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
      }
    }
    fp.close();
-   return hit;  
+   return count;  
  }
  
  //Save the coordinate (XY) information of each pixel of m_pxList[] to the fileName file.

@@ -14,9 +14,10 @@ getPeakMatrix(dataFiles, params, outDirectory)
 initMass: initial mass to consider. By default, the minimum value from the entire range of masses is used.
 finalMass: final   mass to consider. By default, the maximum value from the entire range of masses is used.
 pxList: list of pixels. First pixel=1. By default everyone.
+peakMethod: algorithm for shaping the peaks: uGaussians (defect), iGaussians, derivative (u=united, i=isolated)
+intMethod: intensity values for the binning stage: mean (defect), max
 nThreads: number of threads for parallel processing (by default maxCores-1)
-intMethod: intensity values for the binning stage: mean, max
-imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
+imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenience with really big files.
 fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).}
 
 \item{dataFiles:}{A list of the absolute paths of the files to be processed is required.

@@ -24,8 +24,11 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
 ### **Step 1**.- A list with the necessary parameters is generated.
 
 > For **example**:  
+
+>**params**\ <- list("SNR"=3, "tolerance"=16, "minPixelsSupport"=5)
+
 >**params**\ <- list("SNR"=3, "tolerance"=16, "minPixelsSupport"=5, "noiseMethod"="estnoise_mad", "initMass"=0, "finalMass"=0,
-                "pxList"=c(), "nThreads"=0, intMethod="mean", imzMLChecksum"=F, "fixBrokenUUID"=F)
+                "pxList"=c(), peakMethod="uGaussians", intMethod="mean", "nThreads"=0, imzMLChecksum"=F, "fixBrokenUUID"=F)
 
 
 **Description of the parameters:**
@@ -41,8 +44,9 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
               initMass: Initial mass to consider. By default, the minimum value from the entire range of masses is used.
              finalMass: Final   mass to consider. By default, the maximum value from the entire range of masses is used.
                 pxList: List of pixels. First pixel=1. By default everyone.
-              nThreads: Number of threads for parallel processing (by default maxCores-1)
+            peakMethod: algorithm for shaping the peaks: "uGaussians"" (defect), "iGaussians"", "derivative" (u=united, i=isolated)
              intMethod: intensity values for the binning stage: mean, max
+              nThreads: Number of threads for parallel processing (by default maxCores-1)
          imzMLChecksum: If the binary file checksum must be verified, it can be disabled for convenice with really big files.
          fixBrokenUUID: Set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 ```
@@ -63,8 +67,9 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
              initMass: Initial mass to consider. By default, the minimum value from the entire range of masses is used.
             finalMass: Final   mass to consider. By default, the maximum value from the entire range of masses is used.
                pxList: List of pixels. First pixel=1. By default everyone.
-             nThreads: Number of threads for parallel processing (if zero, nThreads=maxCores-1)
+           peakMethod: algorithm for shaping the peaks: "uGaussians"" (defect), "iGaussians"", "derivative" (u=united, i=isolated)
             intMethod: intensity values for the binning stage: mean, max
+             nThreads: Number of threads for parallel processing (if zero, nThreads=maxCores-1)
         imzMLChecksum: If the binary file checksum must be verified, it can be disabled for convenice with really big files.
         fixBrokenUUID: Set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 
