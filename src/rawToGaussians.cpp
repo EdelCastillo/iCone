@@ -974,7 +974,7 @@ bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVe
 
           gaussians_p[gaussIndex].mean  =(double)gaussOut.mean;
           gaussians_p[gaussIndex].sigma =(double)gaussOut.sigma;
-          gaussians_p[gaussIndex].weight=(double)gaussOut.yFactor*gaussOut.weight;
+          gaussians_p[gaussIndex].weight=(double)gaussOut.weight;
           gaussIndex++;
         }
       }
