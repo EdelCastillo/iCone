@@ -273,7 +273,7 @@ int Common::nearestIndex(double value, double *data, int size)
   }
 }
 
-//Returns the index of data closest to value
+//Returns the index of data.mean closest to value
 //If nearest bits 1:0 == 00, returns the nearest
 //If nearest bits 1:0 == 01, returns the nearest above
 //If nearest bits 1:0 == 10, returns the nearest below
@@ -397,7 +397,15 @@ float Common::median(double *data, int size)
   double median;
   int half=size/2; //If even, it keeps the lower value.
   double *tmpData=0;
-  tmpData=new double[size];
+  try{
+      tmpData=new double[size];
+      }  
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
+  
   for(int i=0; i<size; i++) //copy, since sort() destroys the origin.
     tmpData[i]=data[i];
   sortUp(tmpData, 0, size); //increasing order.
@@ -421,7 +429,15 @@ float Common::medianF(float *data, int size)
   float median;
   int half=size/2; //If even, it keeps the lower value.
   float *tmpData=0;
-  tmpData=new float[size];
+  try{
+    tmpData=new float[size];
+    }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
+  
   for(int i=0; i<size; i++) //copy, since sort() destroys the origin.
     tmpData[i]=data[i];
   

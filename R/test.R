@@ -24,24 +24,26 @@ statisticalQuality<-function(mzRef, mzTest, tolerance)
   Mx=fitQuality(mzRef, mzTest, tolerance)
   v1=Mx[,3]
   logic=Mx[,4]<2 
+#  logic=Mx[,5]==0 
   v2=v1[logic] #good data
   
   m=mean(v1)
   sigma=sd(v1)
   md=median(v1)
-  logic=Mx[,4]==2
+  logic=Mx[,4]>=1
   FP=length((Mx[,4])[logic])
+  repes=length(Mx[,5][Mx[,5]==1])
   
-  txt2=sprintf("mean=%9.4f  sigma=%9.4f  median=%9.4f  FP:%.0f (%.1f%%)\n", m, sigma, md, FP, 100*FP/length(mzTest));
+  txt2=sprintf("mean=%9.4f  sigma=%9.4f  median=%9.4f  FP:%.0f (%.1f%%) repes:%.0f\n", m, sigma, md, FP, 100*FP/length(mzTest), repes);
   cat("        All data:", txt2)
 
   m=mean(v2)
   sigma=sd(v2)
   md=median(v2)
-  logic=Mx[,4]==2
+  logic=Mx[,4]>=1
   FP=length((Mx[,4])[logic])
-  
-  txt2=sprintf("mean=%9.4f  sigma=%9.4f  median=%9.4f  FP:%.0f (%.1f%%)\n", m, sigma, md, FP, 100*FP/length(mzTest));
+  repes=length(Mx[,5][Mx[,5]==1])
+  txt2=sprintf("mean=%9.4f  sigma=%9.4f  median=%9.4f  FP:%.0f (%.1f%%) repes:%.0f\n", m, sigma, md, FP, 100*FP/length(mzTest), repes);
   cat("Without bad data:", txt2)
   return(Mx)
 }
@@ -136,6 +138,47 @@ nearestValue<-function(value, data)
     {
       if(indexLow!=-1 & value-data[indexLow] <= data[indexHigh]-value) {return(data[indexLow]);}
       else {return(data[indexHigh]);}
+    }
+  }
+}
+#' nearestIndex()
+#' Return the nearest value in data
+#' Successive approximation algorithm.
+#' 
+#' @param value -> reference value
+#' @param data  -> array of sort values
+#'
+#' @return nearest value index in data to value; -1 if value es out of range
+#' export
+#' 
+nearestIndex<-function(value, data)
+{
+  indexLow<-1;
+  indexHigh<-length(data);
+  
+  if(indexHigh==indexLow) return(1);
+  if(indexHigh==indexLow+1)
+  {
+    if(indexLow==-1)indexLow=0;
+    if(value-data[indexLow] <= data[indexHigh]-value) {return(indexLow);}
+    else {return(indexHigh);}
+  }
+  
+  if(indexLow!=-1 & value==data[indexLow])       return(indexLow);
+  if(indexLow!=-1 & value<data[indexLow])       {return(indexLow);}
+  else if(value>data[indexHigh]) {return(indexHigh);}
+  else if(value==data[indexHigh]) return(indexHigh);
+  
+  while(1)
+  {
+    indexCenter<-round((indexHigh+indexLow)/2);
+    if(value==data[indexCenter]) return(indexCenter);
+    if(value<data[indexCenter]) {indexHigh<-indexCenter; }
+    else {indexLow <-indexCenter;}
+    if(indexHigh==indexLow+1)
+    {
+      if(indexLow!=-1 & value-data[indexLow] <= data[indexHigh]-value) {return(indexLow);}
+      else {return(indexHigh);}
     }
   }
 }

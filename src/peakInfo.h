@@ -39,7 +39,7 @@ class IntensityPeak
         //Gets the list of compound peak: simple peak joined by their valleys.
         //makes use of the magnitude information.
         //Return -1 if unable to do so
-        int getPeakList(SPECTRO *spectro_p);
+        int getPeakList(SPECTRO *spectro_p, double noiseFactor=1);
 
         //conversión de valores en un sistema no lineal
         //Argumentos:

@@ -105,24 +105,31 @@ GaussiansFromSpectrum::GaussiansFromSpectrum(Rcpp::NumericVector intensity, Rcpp
   else if(strcmp(SNRmethod, "estnoise_sd")  ==0) {m_SNRmethod=2; }
   else if(strcmp(SNRmethod, "estnoise_mad") ==0) {m_SNRmethod=3; }
   else {m_SNRmethod=0; printf("unknow noise method: %s so, estnoise_mad is used\n", SNRmethod);}
+  try{
   m_noiseEst_p=new NoiseEstimation(m_SNRmethod, 1, 9);
 
   //memory and its initialization
-    m_enable=true; //terminates threads if false.
+  m_enable=true; //terminates threads if false.
 
-    printf("\ttotal data points of the spectrum=%d\n",m_mzLength);
+  printf("\ttotal data points of the spectrum=%d\n",m_mzLength);
 
-    //keeps the info of a spectrum, along with the thread that processes it.
-    //memory reservation and initialization.
-      m_spectro.int_p      =new double[m_mzLength];
-      m_spectro.mass_p     =new double[m_mzLength];
-      m_spectro.SNR_p      =new double[m_mzLength];
-      m_spectro.tmpMass_p  =new double[m_mzLength];
-      m_spectro.tmpInt_p   =new double[m_mzLength];
-      m_spectro.tmpSNR_p   =new double[m_mzLength];
-      m_spectro.sort_p     =new int  [m_mzLength];
-      m_spectro.size=0;
-    
+  //keeps the info of a spectrum, along with the thread that processes it.
+  //memory reservation and initialization.
+  m_spectro.int_p      =new double[m_mzLength];
+  m_spectro.mass_p     =new double[m_mzLength];
+  m_spectro.SNR_p      =new double[m_mzLength];
+  m_spectro.tmpMass_p  =new double[m_mzLength];
+  m_spectro.tmpInt_p   =new double[m_mzLength];
+  m_spectro.tmpSNR_p   =new double[m_mzLength];
+  m_spectro.sort_p     =new int  [m_mzLength];
+  m_spectro.size=0;
+  }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return;
+  }
+  
     //Spectrum total
     m_spectro.size=m_mzLength;
     for(int i=0; i<m_mzLength; i++)
@@ -222,40 +229,47 @@ int GaussiansFromSpectrum::rawToGaussians()
     int nPeak;
     
     //the peak are extracted from the spectrum (they are delimited by their indices).
-    nPeak=intPeak.getPeakList(&m_spectro);
+    nPeak=intPeak.getPeakList(&m_spectro, 0.5); //intensity to zero if intensity<SNR*0.5
     
     m_gaussians.size=0;
     if(nPeak>0) //if there are peak to treat
     {
-      //single peak info is saved.
-      m_peakFG.peakF_p=new ION_INDEX[nPeak];
-      for(int i=0; i<nPeak; i++) //copy peak
+      try{
+          //single peak info is saved.
+          m_peakFG.peakF_p=new ION_INDEX[nPeak];
+          for(int i=0; i<nPeak; i++) //copy peak
+          {
+            m_peakFG.peakF_p[i].low =intPeak.getSinglePeak(i).low;
+            m_peakFG.peakF_p[i].max =intPeak.getSinglePeak(i).max;
+            m_peakFG.peakF_p[i].high=intPeak.getSinglePeak(i).high;
+          }
+          m_peakFG.peakFsize=nPeak;//number of simple peak
+          
+          //the information of compound peak (simple joined-overlapping peak) is obtained.
+          int nUPeak=intPeak.getCompoundPeakNumber(); 
+         
+          //Compound peak information is saved.
+          //Each entry is a reference to the initial and final single peak of the merged peak.
+          m_peakFG.peakU_p=new PEAK_UNITED[nUPeak];
+          for(int i=0; i<nUPeak; i++)
+          {
+            m_peakFG.peakU_p[i].low =intPeak.getCompoundPeak(i).peakLow;
+            m_peakFG.peakU_p[i].high=intPeak.getCompoundPeak(i).peakHigh;
+          }
+          m_peakFG.peakUsize=nUPeak;//number of compound peak
+          
+          //conversion to Gaussians.
+          //------------------------
+          
+          gaussians_p=new GAUSS_PARAMS[nPeak]; //temporal copy of Gaussians
+          centroids_p=new double[nPeak];       //temporary mass copy
+          centroidsIndex_p=new int[nPeak];     //indices to ordered masses
+          }
+      catch(const std::bad_alloc& e)
       {
-        m_peakFG.peakF_p[i].low =intPeak.getSinglePeak(i).low;
-        m_peakFG.peakF_p[i].max =intPeak.getSinglePeak(i).max;
-        m_peakFG.peakF_p[i].high=intPeak.getSinglePeak(i).high;
+        printf("Error reserving memory: %s\n",e.what());
+        return 0;
       }
-      m_peakFG.peakFsize=nPeak;//number of simple peak
-      
-      //the information of compound peak (simple joined-overlapping peak) is obtained.
-      int nUPeak=intPeak.getCompoundPeakNumber(); 
-     
-      //Compound peak information is saved.
-      //Each entry is a reference to the initial and final single peak of the merged peak.
-      m_peakFG.peakU_p=new PEAK_UNITED[nUPeak];
-      for(int i=0; i<nUPeak; i++)
-      {
-        m_peakFG.peakU_p[i].low =intPeak.getCompoundPeak(i).peakLow;
-        m_peakFG.peakU_p[i].high=intPeak.getCompoundPeak(i).peakHigh;
-      }
-      m_peakFG.peakUsize=nUPeak;//number of compound peak
-      
-      //conversion to Gaussians.
-      //------------------------
-      
-      gaussians_p=new GAUSS_PARAMS[nPeak]; //temporal copy of Gaussians
-      centroids_p=new double[nPeak];       //temporary mass copy
-      centroidsIndex_p=new int[nPeak];     //indices to ordered masses
       
       int nGaussians=getGaussians(&m_spectro, gaussians_p);
      
@@ -312,7 +326,15 @@ int GaussiansFromSpectrum::getGaussians(SPECTRO *spectro_p, GAUSS_PARAMS *gaussi
   int nUPeak=m_peakFG.peakUsize; //#united peak
   
   //memory for predictable Gaussians.
-  m_gaussians.gauss_p=new GAUSS_PARAMS[m_peakFG.peakFsize];
+  try{
+      m_gaussians.gauss_p=new GAUSS_PARAMS[m_peakFG.peakFsize];
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
+  
   
   //for each set of joined peak.
   for(int uPeak=0; uPeak<nUPeak; uPeak++)

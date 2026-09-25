@@ -74,12 +74,14 @@ public:
   //returns the index to data closest to value.
   int nearestIndex(double value, double *data, int size);
   
-  //Returns the index of data closest to value
-  //If nearest== 1, returns the nearest above
-  //If nearest==-1, returns the nearest below
-  //If nearest== 0, returns the nearest
-  int nearestIndexGaussians(float value, GAUSS_PARAMS *data, int size, int nearest);
-  
+  //Returns the index of data.mean closest to value
+  //If nearest bits 1:0 == 00, returns the nearest
+  //If nearest bits 1:0 == 01, returns the nearest above
+  //If nearest bits 1:0 == 10, returns the nearest below
+  //If nearest bit    2 == 0 & value is out of range returns the nearest
+  //If nearest bit    2 == 1 & value is out of range returns -1
+  int nearestIndexGaussians (float value, GAUSS_PARAMS *data, int size, int nearest=0);
+
   //returns the index to data.low closest to value.
   int nearestIndexMassRangeLow(float value, MASS_RANGE *data, int size);
   

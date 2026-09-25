@@ -30,7 +30,15 @@ Peak::Peak(SPECTRO *spectro_p, double SNR)
     m_magnitude_p=spectro_p->int_p;
     m_magnitudeSize=spectro_p->size;
     m_mzIndex_p=0;
-    m_mzIndex_p=new ION_INDEX[m_magnitudeSize];
+    try{
+        m_mzIndex_p=new ION_INDEX[m_magnitudeSize];
+        }
+    catch(const std::bad_alloc& e)
+    {
+      printf("Error reserving memory: %s\n",e.what());
+      return;
+    }
+    
     //m_noiseLevel=spectro_p->noise*SNR;
     m_noiseLevel=spectro_p->noise;
     m_SNR=SNR;
@@ -250,11 +258,10 @@ int Peak::get(int mzIndexIni, int mzIndexEnd)
 
         m_mzIndex_p[i].confidence=false;
         double minValue=1e32, maxValue=-1;
-        int maxIndex, minIndex;
         for(int j=m_mzIndex_p[i].low+1; j<m_mzIndex_p[i].high; j++) //for the values within the ion.
             {
-            if(m_magnitude_p[j]>maxValue) {maxValue=m_magnitude_p[j]; maxIndex=j;}
-            if(m_magnitude_p[j]<minValue) {minValue=m_magnitude_p[j]; minIndex=j;}
+            if(m_magnitude_p[j]>maxValue) {maxValue=m_magnitude_p[j];}
+            if(m_magnitude_p[j]<minValue) {minValue=m_magnitude_p[j];}
             }
         resolution=m_noiseLevel;  //lower noise
         if(maxValue-minValue>resolution)

@@ -24,6 +24,8 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <new>
+using namespace std; 
 
 #define DECONV_MAX_GAUSSIAN 10  //>=3
 

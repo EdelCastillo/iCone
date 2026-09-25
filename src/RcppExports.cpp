@@ -231,6 +231,126 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rawToGaussiansR
+int rawToGaussiansR(Rcpp::String baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, Rcpp::NumericVector pxList, int nThreads);
+RcppExport SEXP _iCone_rawToGaussiansR(SEXP baseDirSEXP, SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pxListSEXP, SEXP nThreadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::String >::type baseDir(baseDirSEXP);
+    Rcpp::traits::input_parameter< const char* >::type ibdFname(ibdFnameSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type imzML(imzMLSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
+    Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pxList(pxListSEXP);
+    Rcpp::traits::input_parameter< int >::type nThreads(nThreadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(rawToGaussiansR(baseDir, ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads));
+    return rcpp_result_gen;
+END_RCPP
+}
+// peakMatrixR
+int peakMatrixR(Rcpp::String baseDir, Rcpp::List params, double mzLow, double mzHigh, int nPixels, IntegerVector pxSamples, int nSamples);
+RcppExport SEXP _iCone_peakMatrixR(SEXP baseDirSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP nPixelsSEXP, SEXP pxSamplesSEXP, SEXP nSamplesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::String >::type baseDir(baseDirSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
+    Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
+    Rcpp::traits::input_parameter< int >::type nPixels(nPixelsSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type pxSamples(pxSamplesSEXP);
+    Rcpp::traits::input_parameter< int >::type nSamples(nSamplesSEXP);
+    rcpp_result_gen = Rcpp::wrap(peakMatrixR(baseDir, params, mzLow, mzHigh, nPixels, pxSamples, nSamples));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rGetRawBasic
+List rGetRawBasic(const char* ibdFname, Rcpp::List imzML, Rcpp::NumericVector pxList);
+RcppExport SEXP _iCone_rGetRawBasic(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP pxListSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type ibdFname(ibdFnameSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type imzML(imzMLSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pxList(pxListSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetRawBasic(ibdFname, imzML, pxList));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rGetAverageGaussianSpectrum
+List rGetAverageGaussianSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, Rcpp::NumericVector pxList, double oversampling, int nThreads);
+RcppExport SEXP _iCone_rGetAverageGaussianSpectrum(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pxListSEXP, SEXP oversamplingSEXP, SEXP nThreadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type ibdFname(ibdFnameSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type imzML(imzMLSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
+    Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pxList(pxListSEXP);
+    Rcpp::traits::input_parameter< double >::type oversampling(oversamplingSEXP);
+    Rcpp::traits::input_parameter< int >::type nThreads(nThreadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetAverageGaussianSpectrum(ibdFname, imzML, params, mzLow, mzHigh, pxList, oversampling, nThreads));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rGetAverageSpectrum
+List rGetAverageSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, Rcpp::NumericVector pxList, double oversampling, int nThreads);
+RcppExport SEXP _iCone_rGetAverageSpectrum(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pxListSEXP, SEXP oversamplingSEXP, SEXP nThreadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type ibdFname(ibdFnameSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type imzML(imzMLSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
+    Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pxList(pxListSEXP);
+    Rcpp::traits::input_parameter< double >::type oversampling(oversamplingSEXP);
+    Rcpp::traits::input_parameter< int >::type nThreads(nThreadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetAverageSpectrum(ibdFname, imzML, params, mzLow, mzHigh, pxList, oversampling, nThreads));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rSaveMassRange
+bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVector pixelSize);
+RcppExport SEXP _iCone_rSaveMassRange(SEXP fileNameSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pixelSizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type fileName(fileNameSEXP);
+    Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
+    Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type pixelSize(pixelSizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(rSaveMassRange(fileName, mzLow, mzHigh, pixelSize));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rLoadMassRange
+NumericVector rLoadMassRange(const char* fileName);
+RcppExport SEXP _iCone_rLoadMassRange(SEXP fileNameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type fileName(fileNameSEXP);
+    rcpp_result_gen = Rcpp::wrap(rLoadMassRange(fileName));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rGetDirectory
+CharacterVector rGetDirectory(const char* path);
+RcppExport SEXP _iCone_rGetDirectory(SEXP pathSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type path(pathSEXP);
+    rcpp_result_gen = Rcpp::wrap(rGetDirectory(path));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rGetPixelsCoordinates
 NumericMatrix rGetPixelsCoordinates(const char* fileName, int sample);
 RcppExport SEXP _iCone_rGetPixelsCoordinates(SEXP fileNameSEXP, SEXP sampleSEXP) {
@@ -280,125 +400,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// peakMatrixR
-List peakMatrixR(Rcpp::String baseDir, Rcpp::List params, double mzLow, double mzHigh, int nPixels, IntegerVector pxSamples, int nSamples);
-RcppExport SEXP _iCone_peakMatrixR(SEXP baseDirSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP nPixelsSEXP, SEXP pxSamplesSEXP, SEXP nSamplesSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::String >::type baseDir(baseDirSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
-    Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
-    Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
-    Rcpp::traits::input_parameter< int >::type nPixels(nPixelsSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type pxSamples(pxSamplesSEXP);
-    Rcpp::traits::input_parameter< int >::type nSamples(nSamplesSEXP);
-    rcpp_result_gen = Rcpp::wrap(peakMatrixR(baseDir, params, mzLow, mzHigh, nPixels, pxSamples, nSamples));
-    return rcpp_result_gen;
-END_RCPP
-}
-// rawToGaussiansR
-int rawToGaussiansR(Rcpp::String baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, Rcpp::NumericVector pxList, int nThreads);
-RcppExport SEXP _iCone_rawToGaussiansR(SEXP baseDirSEXP, SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pxListSEXP, SEXP nThreadsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::String >::type baseDir(baseDirSEXP);
-    Rcpp::traits::input_parameter< const char* >::type ibdFname(ibdFnameSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type imzML(imzMLSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
-    Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
-    Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pxList(pxListSEXP);
-    Rcpp::traits::input_parameter< int >::type nThreads(nThreadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(rawToGaussiansR(baseDir, ibdFname, imzML, params, mzLow, mzHigh, pxList, nThreads));
-    return rcpp_result_gen;
-END_RCPP
-}
-// rGetRawBasic
-List rGetRawBasic(const char* ibdFname, Rcpp::List imzML, Rcpp::NumericVector pxList);
-RcppExport SEXP _iCone_rGetRawBasic(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP pxListSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const char* >::type ibdFname(ibdFnameSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type imzML(imzMLSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pxList(pxListSEXP);
-    rcpp_result_gen = Rcpp::wrap(rGetRawBasic(ibdFname, imzML, pxList));
-    return rcpp_result_gen;
-END_RCPP
-}
-// rGetAverageGaussianSpectrum
-List rGetAverageGaussianSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, Rcpp::NumericVector pxList, double overSampling, int nThreads);
-RcppExport SEXP _iCone_rGetAverageGaussianSpectrum(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pxListSEXP, SEXP overSamplingSEXP, SEXP nThreadsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const char* >::type ibdFname(ibdFnameSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type imzML(imzMLSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
-    Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
-    Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pxList(pxListSEXP);
-    Rcpp::traits::input_parameter< double >::type overSampling(overSamplingSEXP);
-    Rcpp::traits::input_parameter< int >::type nThreads(nThreadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(rGetAverageGaussianSpectrum(ibdFname, imzML, params, mzLow, mzHigh, pxList, overSampling, nThreads));
-    return rcpp_result_gen;
-END_RCPP
-}
-// rGetAverageSpectrum
-List rGetAverageSpectrum(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, double mzLow, double mzHigh, Rcpp::NumericVector pxList, double overSampling);
-RcppExport SEXP _iCone_rGetAverageSpectrum(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pxListSEXP, SEXP overSamplingSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const char* >::type ibdFname(ibdFnameSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type imzML(imzMLSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
-    Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
-    Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pxList(pxListSEXP);
-    Rcpp::traits::input_parameter< double >::type overSampling(overSamplingSEXP);
-    rcpp_result_gen = Rcpp::wrap(rGetAverageSpectrum(ibdFname, imzML, params, mzLow, mzHigh, pxList, overSampling));
-    return rcpp_result_gen;
-END_RCPP
-}
-// rSaveMassRange
-bool rSaveMassRange(const char* fileName, double mzLow, double mzHigh, NumericVector pixelSize);
-RcppExport SEXP _iCone_rSaveMassRange(SEXP fileNameSEXP, SEXP mzLowSEXP, SEXP mzHighSEXP, SEXP pixelSizeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const char* >::type fileName(fileNameSEXP);
-    Rcpp::traits::input_parameter< double >::type mzLow(mzLowSEXP);
-    Rcpp::traits::input_parameter< double >::type mzHigh(mzHighSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type pixelSize(pixelSizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(rSaveMassRange(fileName, mzLow, mzHigh, pixelSize));
-    return rcpp_result_gen;
-END_RCPP
-}
-// rLoadMassRange
-NumericVector rLoadMassRange(const char* fileName);
-RcppExport SEXP _iCone_rLoadMassRange(SEXP fileNameSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const char* >::type fileName(fileNameSEXP);
-    rcpp_result_gen = Rcpp::wrap(rLoadMassRange(fileName));
-    return rcpp_result_gen;
-END_RCPP
-}
-// rGetDirectory
-CharacterVector rGetDirectory(const char* path);
-RcppExport SEXP _iCone_rGetDirectory(SEXP pathSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const char* >::type path(pathSEXP);
-    rcpp_result_gen = Rcpp::wrap(rGetDirectory(path));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_iCone_rGetGaussiansFromSpectrum", (DL_FUNC) &_iCone_rGetGaussiansFromSpectrum, 5},
@@ -417,18 +418,18 @@ static const R_CallMethodDef CallEntries[] = {
     {"_iCone_CimzMLParse", (DL_FUNC) &_iCone_CimzMLParse, 1},
     {"_iCone_CimzMLStore", (DL_FUNC) &_iCone_CimzMLStore, 3},
     {"_iCone_rGetPixelGaussians", (DL_FUNC) &_iCone_rGetPixelGaussians, 6},
+    {"_iCone_rawToGaussiansR", (DL_FUNC) &_iCone_rawToGaussiansR, 8},
+    {"_iCone_peakMatrixR", (DL_FUNC) &_iCone_peakMatrixR, 7},
+    {"_iCone_rGetRawBasic", (DL_FUNC) &_iCone_rGetRawBasic, 3},
+    {"_iCone_rGetAverageGaussianSpectrum", (DL_FUNC) &_iCone_rGetAverageGaussianSpectrum, 8},
+    {"_iCone_rGetAverageSpectrum", (DL_FUNC) &_iCone_rGetAverageSpectrum, 8},
+    {"_iCone_rSaveMassRange", (DL_FUNC) &_iCone_rSaveMassRange, 4},
+    {"_iCone_rLoadMassRange", (DL_FUNC) &_iCone_rLoadMassRange, 1},
+    {"_iCone_rGetDirectory", (DL_FUNC) &_iCone_rGetDirectory, 1},
     {"_iCone_rGetPixelsCoordinates", (DL_FUNC) &_iCone_rGetPixelsCoordinates, 2},
     {"_iCone_rGetBasic", (DL_FUNC) &_iCone_rGetBasic, 1},
     {"_iCone_rGetCentroid", (DL_FUNC) &_iCone_rGetCentroid, 4},
     {"_iCone_rGetMatrix", (DL_FUNC) &_iCone_rGetMatrix, 2},
-    {"_iCone_peakMatrixR", (DL_FUNC) &_iCone_peakMatrixR, 7},
-    {"_iCone_rawToGaussiansR", (DL_FUNC) &_iCone_rawToGaussiansR, 8},
-    {"_iCone_rGetRawBasic", (DL_FUNC) &_iCone_rGetRawBasic, 3},
-    {"_iCone_rGetAverageGaussianSpectrum", (DL_FUNC) &_iCone_rGetAverageGaussianSpectrum, 8},
-    {"_iCone_rGetAverageSpectrum", (DL_FUNC) &_iCone_rGetAverageSpectrum, 7},
-    {"_iCone_rSaveMassRange", (DL_FUNC) &_iCone_rSaveMassRange, 4},
-    {"_iCone_rLoadMassRange", (DL_FUNC) &_iCone_rLoadMassRange, 1},
-    {"_iCone_rGetDirectory", (DL_FUNC) &_iCone_rGetDirectory, 1},
     {NULL, NULL, 0}
 };
 

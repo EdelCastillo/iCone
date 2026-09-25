@@ -97,7 +97,7 @@ int GmmPeak::iniGMM()
 {
     int nGauss=0;
     m_etpHits=0;
-    int etpLow, etpHigh, mzSize;
+    int etpLow, mzSize;
     double sumaMagEpeak, sumaMagMpeak, maxEpeak;
     ION_INDEX *magPeak_p;
 
@@ -141,9 +141,8 @@ int GmmPeak::iniGMM()
     m_sGmm.y[j]=0.0;
     m_sGmm.size=mzSize+2; //data size increased by two
     nGauss=0; //num of gausianas
-    int iCount=-1;
     m_nDeconv=0;
-//printf("...%d %d\n", lowPeakIndex, highPeakIndex);    
+    
     //in each single magnitude peak there may be several entropy peak, or none.
     //are made to fit within the limits of the peak magnitude
     for(int peak=lowPeakIndex; peak<=highPeakIndex; peak++)

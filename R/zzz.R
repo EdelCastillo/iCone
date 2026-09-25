@@ -2,7 +2,7 @@
 #' 
 #'  MSI data peak picking
 #' 
-#' @name rPPGAS
+#' @name iCone
 #' @aliases iCone-package 
 #' @author Esteban del Castillo
 #' @import Rcpp

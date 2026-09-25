@@ -44,13 +44,16 @@ IntensityPeak::~IntensityPeak()
 //Get a list of simple peak associated with each magnitude simple peak
 //Get the list of compound peak: simple peak joined by their valleys
 //makes use of the magnitude information
+//intensity to zero if intensity<SNR*noiseFactor
 //Return -1 if unable to do so
-int IntensityPeak::getPeakList(SPECTRO *spectro_p)
+int IntensityPeak::getPeakList(SPECTRO *spectro_p, double noiseFactor)
 {
   int nIntPeak=0;
+  double tmpSNR=m_SNR*noiseFactor;
+  
   for(int i=0; i<spectro_p->size; i++)
-    if(spectro_p->SNR_p[i]< m_SNR) spectro_p->int_p[i]=0;
-    
+   if(spectro_p->SNR_p[i]< tmpSNR) spectro_p->int_p[i]=0.0;
+  
   try
         {
         //get the list of peak from the magnitude
@@ -66,7 +69,6 @@ int IntensityPeak::getPeakList(SPECTRO *spectro_p)
           m_peakList.intPeak_p[i].low =m_intPeak_p->m_mzIndex_p[i].low;
           m_peakList.intPeak_p[i].max =m_intPeak_p->m_mzIndex_p[i].max;
           m_peakList.intPeak_p[i].high=m_intPeak_p->m_mzIndex_p[i].high;
-
         }
         m_peakList.nIntPeak=nIntPeak;
         m_peakList.uPeak_p=new UNITED_PEAK[nIntPeak];
@@ -77,6 +79,7 @@ int IntensityPeak::getPeakList(SPECTRO *spectro_p)
         printf("Error reserving memory: %s\n",e.what());
         return -1;
         }
+  
   m_nUnitedPeak=unitedPeak(&m_peakList, spectro_p);
   m_peakList.nUPeak=m_nUnitedPeak;
   m_nIntPeak=nIntPeak;
@@ -98,27 +101,25 @@ int IntensityPeak::unitedPeak(PEAK_LIST *peakList_p, SPECTRO *spectro_p)
 
     while(true)
         {
-
+      peakList_p->uPeak_p[nUPeak].peakLow =iPeak;
       //if the index is less than the maximum and is linked to the next peak
-      if(m_unitedPeak && iPeak<(nIntPeak-1) && (peakList_p->intPeak_p[iPeak].high==peakList_p->intPeak_p[iPeak+1].low) &&
-           spectro_p->SNR_p[peakList_p->intPeak_p[iPeak].high]>m_SNR 
-           && peakList_p->uPeak_p[nUPeak].peakHigh - peakList_p->uPeak_p[nUPeak].peakLow +1 < DECONV_MAX_GAUSSIAN)
-            {
+      if(m_unitedPeak && iPeak<(nIntPeak-1) && (peakList_p->intPeak_p[iPeak].high==peakList_p->intPeak_p[iPeak+1].low))
+//          && spectro_p->SNR_p[peakList_p->intPeak_p[iPeak].max]>=m_SNR)
+          {
           //se toma nota
-            peakList_p->uPeak_p[nUPeak].peakLow =iPeak;
+        peakList_p->uPeak_p[nUPeak].peakLow =iPeak;
             peakList_p->uPeak_p[nUPeak].peakHigh=iPeak+1;
             iPeak++;
             //perhaps there are more peak linked in a chain
             hit=false;
             while(true)
                 {
-              //if(peakList_p->uPeak_p[nUPeak].peakHigh-peakList_p->uPeak_p[nUPeak].peakLow>=DECONV_MAX_GAUSSIAN-2) 
-              //  printf(".. %d %d\n", peakList_p->uPeak_p[nUPeak].peakHigh, peakList_p->uPeak_p[nUPeak].peakLow);
-              
               //if the index is less than the maximum and is linked to the next peak.
-                if(iPeak<(nIntPeak-1) && (peakList_p->intPeak_p[iPeak].high==peakList_p->intPeak_p[iPeak+1].low) &&
-                   spectro_p->SNR_p[peakList_p->intPeak_p[iPeak].high]>m_SNR
-                     && peakList_p->uPeak_p[nUPeak].peakHigh - peakList_p->uPeak_p[nUPeak].peakLow +1 < DECONV_MAX_GAUSSIAN)
+              //control de límites en el numero de picos unidos
+              //si se supera el límite, se inicia un nuevo paquete
+              if(iPeak<(nIntPeak-1) && (peakList_p->intPeak_p[iPeak].high==peakList_p->intPeak_p[iPeak+1].low)
+                   // && spectro_p->SNR_p[peakList_p->intPeak_p[iPeak].max]>=m_SNR
+                     && ((peakList_p->uPeak_p[nUPeak].peakHigh - peakList_p->uPeak_p[nUPeak].peakLow +1) < DECONV_MAX_GAUSSIAN))
                     {
                   //the end of the joint peak is updated.
                     peakList_p->uPeak_p[nUPeak].peakHigh=iPeak+1;
@@ -132,20 +133,28 @@ int IntensityPeak::unitedPeak(PEAK_LIST *peakList_p, SPECTRO *spectro_p)
                     break;
                     }
                 //if you have not reached the end and are not linked to the next one.
-                else {iPeak++; nUPeak++; break;} //two separate peak.
+                else {
+                  iPeak++; nUPeak++; break;} //two separate peak.
                 }
             if(hit) break;
             }
 
         else  //single peak
             {
-            peakList_p->uPeak_p[nUPeak].peakLow =iPeak;
-            peakList_p->uPeak_p[nUPeak].peakHigh=iPeak;
-            nUPeak++;
+           //spectro_p->SNR_p[peakList_p->intPeak_p[iPeak].high]>m_SNR 
+           if(spectro_p->SNR_p[peakList_p->intPeak_p[iPeak].max]>=m_SNR)
+            {
+              peakList_p->uPeak_p[nUPeak].peakLow =iPeak;
+              peakList_p->uPeak_p[nUPeak].peakHigh=iPeak;
+              nUPeak++;
+            }
+//          printf("%.2f %.2f %.2f %.2f\n",m_SNR, spectro_p->noise, spectro_p->SNR_p[peakList_p->intPeak_p[iPeak].max], 
+//             spectro_p->int_p[peakList_p->intPeak_p[iPeak].max]);
             if(iPeak >= nIntPeak-1) break;
             else iPeak++;
             }
         }
+//  for(int i=0; i<spectro_p->size; i++)  printf("%.2f\n", spectro_p->int_p[i]);
   return nUPeak;
 }
 

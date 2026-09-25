@@ -24,6 +24,10 @@
 #include "common_methods.h"
 #include <stdlib.h>
 #include <fstream>
+#include "noiseestimation.h"
+#include "peakInfo.h"
+#include "gmmPeak.h"
+#include "kmeansR.h"
 
 using namespace Rcpp;
 using namespace std; 
@@ -40,7 +44,7 @@ public:
   //         mzLow: lower  mass to consider
   //        mzHigh: higher mass to consider
   //     pxSupport: minimum percentage of pixels that must support an ion for it to be considered.
-  PeakMatrix(int totalPixels, double massResolution, double mzLow, double mzHigh, double pxSupport, int *pxSamples_p, int nSamples, char *baseDir, int intMethod=MEAN);
+  PeakMatrix(int totalPixels, double massResolution, double mzLow, double mzHigh, double pxSupport, int *pxSamples_p, int nSamples, char *baseDir, int intMethod=MEAN, int nThreads=1);
     
   //destructor
   ~PeakMatrix();
@@ -67,39 +71,75 @@ public:
   //Returns the number of masses.
   int getCentroidsIntoRange(double *mass_p, int *px_p, double *intensity_p, int massSize);
   
-  //Determines the centers of groups of values whose distance does not exceed a given tolerance.
-  //mass_p: vector masses.
-  //px_p: vector of pixels.
-  //iGauss_p: vector gaussians index
-  //tolerance: maximum bin size.
-  //Returns the number of centers detected (length of the centers_p array).
-  int centers(double *mass_p, int *px_p, double *intensity_p, int size, double tolerance);
-  
   //generate de peak matrix with the centroids, their tolerance, and the number of support pixels.  
   int getCentroids();
   
   //Save the peak matrix to the file ".../tmpPeakMatrix.bin"
   int infoToFile(char *baseDir);
   
+  //sets the number of pixels per sample based on info in _pixelsCoord.bin
+  //result stored in vector m_pixelsSample[]
+  //returns the number of samples, or -1 on failure
   int getSamplesPixelNumber();
+  
+  //It establishes the task distribution lineal for each thread.
+  //Each thread receives indices for the start and end segments.
+  void setWorkThr(int vectorSize);
+  
+  
+  //Parallel execution. Each mass segment is treated separately.
+  //Based on the Gaussians, the centroids within a mass segment are determined.
+  // a)An ordered vector containing the Gaussian centers of all pixels is created.
+  // b)Iterative averaging, constrained by a tolerance threshold, is used to generate a proposal for centroids.
+  // c)This estimate is used as the initialization centroid for the k-means algorithm.
+  //   The dataset consists of the centers of Gaussians centered on the initialization value and delimited by the tolerance.
+  // d)An intensity value is associated with each centroid for every pixel. 
+  //   A pixel contributes the maximum value from the Gaussian nearest to the centroid, provided it falls within the tolerance. 
+  //   If a pixel contributes to more than one Gaussian, either the maximum value or the mean value is extracted, depending on the `intMethod` argument.
+  //   A representative intensity value is also generated for the centroid. It is the average or maximum value, depending on the intMethod parameter.
+  //The centroid information is saved in a file with a name ending in _peakMatrix_n.bin, where n is the thread number.
+  void mtSegments(int thrIdx);
+  
+  
+  //Parallel operation. 
+  //1) A vector is generated with spacing equal to one-tenth of the tolerance set for the lowest mass. 
+  //2) One unit is accumulated in each cell for every Gaussian distribution coinciding with that mass interval, 
+  //assuming a unified standard deviation equal to half the tolerance for the mass in question.
+  //It serves to delineate regions of interest for subsequent parallel processing. Noise matters.
+  void mtMassAxis(int thrIdx);
     
-  double *m_centers_p;
-  int    *m_centersSize_p;
-  int     m_nCentroids;
   
   int   m_totalPixels,
-  m_nIons,
-  m_nSamples;
-  double m_massResolution, 
-  m_mzHigh, 
-  m_mzLow, 
-  m_pxSupport,
-  m_linkedPeaks;
-  GAUSS_SP      *m_gaussians_p;
+        m_nSamples,
+        m_nCentroids;
+  double 
+        m_tolerance, 
+        m_mzHigh, 
+        m_mzLow, 
+        m_pxSupport,
+        m_noise;
+  
+  private:
+    
+  GAUSS_SP      *m_gaussians_p, 
+                *m_centroids_p;
+  GAUSS_PARAMS  *m_centroidsGaussians_p;
   MASS_RANGE    *m_massRange_p;
   int           *m_pxSamples_p;
   PIXEL_XY      *m_pixelsCoordinates_p;
   char *        m_baseDir;
-  int          m_intMethod;
+  int           m_intMethod;
+
+  MASS_RANGE  *m_MR_p,
+              *m_MRthr_p;
+  double      *m_massAxis_p,
+              m_deltaMass;
+  int         m_massAxisSize,
+              m_nThreads,
+              m_MRsize;
+  SPECTRO     m_spectro;
+  std::thread  *m_thread_p[MAX_THREADS];
+  float       m_status[MAX_THREADS];
+  
 };
 #endif

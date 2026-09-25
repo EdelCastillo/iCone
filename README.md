@@ -53,7 +53,7 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
 
 ### **Step 2**.- The peak selection algorithm is applied and its peak matrix is obtained:
 
-> data <-**getPeakMatrix**(dataFiles, outDirectory, params)
+> data <-**getPeakMatrix**(dataFiles, params, outDirectory)
 
 **Description of the parameters:**   
 ```
@@ -62,7 +62,6 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
                  In file.txt, lines are considered comments if they begin with the '#' character or the blank character.
                  Only files in 'imzML' format are recognized.
                  The attached binary file, with the 'ibd' extension, must be in the same directory that 'imzML' files.
-   outDirectory: Absolute path to the directory where the support files will be created.         
          params: List of parameters given in Step 1:
              initMass: Initial mass to consider. By default, the minimum value from the entire range of masses is used.
             finalMass: Final   mass to consider. By default, the maximum value from the entire range of masses is used.
@@ -72,6 +71,7 @@ This is a new peak selection algorithm with a dual purpose: to obtain centroids 
              nThreads: Number of threads for parallel processing (if zero, nThreads=maxCores-1)
         imzMLChecksum: If the binary file checksum must be verified, it can be disabled for convenice with really big files.
         fixBrokenUUID: Set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
+         outDirectory: Absolute path to the directory where the support files will be created. By default it's the same as dataFiles         
 
          return: A list with the input parameters  
 ```
@@ -149,13 +149,13 @@ Returns a list containing the intensity matrices associated with each sample.
 
 ### **complementary functions.**
 
-> lst <-**getPixelGaussians**(dataFile, params, pixel=1)
+> lst <-**getPixelGaussians**(data, params, pixel=1)
 
 Reports information about a single spectrum.
 
 **Description of the parameters:**   
 ```
-       dataFile: Absolute path to the filename with the imzML extension.
+           data: a list from getPeakMatriz() or absolute reference to the file with the imzML extension.
                  The attached binary file, with the ibd extension, must be in the same directory.
          params: List of parameters:
                 "SNR": signal-to-noise ratio
@@ -174,47 +174,47 @@ Reports information about a single spectrum.
                 noise: Noise estimation.
 ```
 
-> lst <-**getAverageGaussianSpectrum**(dataFile, params)
+> lst <-**getAverageGaussianSpectrum**(data, params)
 
  Report the average value of the Gaussian from all data into .imzML file.
 
 **Description of the parameters:**   
 ```
-       dataFile: Absolute path to the filename with the imzML extension.
+           data: a list from getPeakMatriz() or absolute reference to the file with the imzML extension.
                  The attached binary file, with the ibd extension, must be in the same directory.
          params: List of parameters.
            initMass: initial  mass to consider. By default, the minimum value from the entire range of masses is used.
           finalMass: final    mass to consider. By default, the maximum value from the entire range of masses is used.
              pxList: list of pixels. First pixel=1. By default everyone.
-       overSampling: interval between points on the mass axis = tolerance/overSampling.
+       oversampling: interval between points on the mass axis = tolerance/oversampling.
            nThreads: number of threads for parallel processing (by default maxCores-1)
       imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
       fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
   
   return a list: 
-          averageMz: array of masses at intervals of the tolerance/overSampling
+          averageMz: array of masses at intervals of the tolerance/oversampling
    averageIntensity: array of average Gaussians values 
 ```
 
-> lst <-**getAverageSpectrum**(dataFile, params)
+> lst <-**getAverageSpectrum**(data, params)
 
 Report the average value of the intensities from all data into .imzML file.
 Noise is not taken into account.
 
 **Description of the parameters:**   
 ```
-       dataFile: Absolute path to the filename with the imzML extension.
+         data: a list from getPeakMatriz() or absolute reference to the file with the imzML extension.
                  The attached binary file, with the ibd extension, must be in the same directory.
-       params:   A list:          
+       params: a list:          
            initMass: initial  mass to consider. By default, the minimum value from the entire range of masses is used.
           finalMass: final    mass to consider. By default, the maximum value from the entire range of masses is used.
              pxList: list of pixels. First pixel=1. By default everyone.
-       overSampling: interval between points on the mass axis = tolerance/overSampling.
+       oversampling: interval between points on the mass axis = tolerance/oversampling.
       imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
       fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
               
   return a list: 
-          averageMz: array of masses at intervals of the tolerance/overSampling
+          averageMz: array of masses at intervals of the tolerance/oversampling
    averageIntensity: array of average Gaussians values 
 ```
 

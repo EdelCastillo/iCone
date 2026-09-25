@@ -16,6 +16,16 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #********************************************************************************/
  
+#' @name version
+#' @title reports the current version.
+#' @return iCone current version
+#' 
+#' @export
+  version <-function()
+  {
+    return ("2.0.0")
+  }
+
 #' @name getPeakMatrix
 #' @title obtains the peak matrix from imzML files.
 #' @param dataFiles: A list of the absolute paths of the files to be processed is required. 
@@ -307,6 +317,7 @@ getPeakMatrix<-function(dataFiles, params, outDirectory)
   #step 2 and 3 (gaussians to centroids). Peak matrix to file _peakMatrix.bin
   ret=peakMatrixR(baseName, params, massRange[1], massRange[2], totalPixels, pxSamples, totalSamples);
   gc() 
+  #return (ret)
   
   data=list("dataFiles"=samples, "outDirectory"=outBaseDir, "params"=params)
   
@@ -317,9 +328,9 @@ getPeakMatrix<-function(dataFiles, params, outDirectory)
 
 #//////////////////////////////////////////////////////////////
 
-#' @name getPxGaussians
+#' @name getPixelGaussians
 #' @title It retrieves information from a single pixel.
-#' @param dataFiles: absolute reference to the file with the imzML extension.
+#' @param data -> a list from getPeakMatriz() or absolute reference to the file with the imzML extension.
 #' @param params  
 #'              "SNR": signal-to-noise ratio
 #'      "noiseMethod": method for estimating noise.
@@ -336,9 +347,26 @@ getPeakMatrix<-function(dataFiles, params, outDirectory)
 #'          SNR: signal-to-noise ratio for each point of mass.
 #'        noise: noise estimation.
 #' @export
-getPixelGaussians<-function(dataFile, params, pixel=1)
+getPixelGaussians<-function(data, params, pixel=1)
 {
-  if(!file.exists(dataFile))
+  if(missing(data))
+     stop("dataFile param not found\n")
+  if(class(data)=="character")
+  {
+    if(!file.exists(data))
+    {
+      stop("File not found\n")
+    }
+    else 
+    {
+      dataFile=data
+    }
+  }
+  else if(exists("dataFiles", where=data))
+  {
+    dataFile=data$dataFiles[1]
+  }
+  else
   {
     stop("File not found\n")
   }
@@ -432,33 +460,50 @@ getPixelGaussians<-function(dataFile, params, pixel=1)
 
 #' @name getAverageGaussianSpectrum
 #' @title It obtains the average value of the Gaussian from all data into .imzML file.
-#' @param dataFile: absolute reference to the file with the imzML extension.
+#' @param data -> a list from getPeakMatriz() or absolute reference to the file with the imzML extension.
 #' @param parmas:
 #'       initMass: initial  mass to consider. By default, the minimum value from the entire range of masses is used.
 #'      finalMass: final    mass to consider. By default, the maximum value from the entire range of masses is used.
 #'         pxList: list of pixels. First pixel=1. By default everyone.
-#'   overSampling: interval between points on the mass axis = tolerance/overSampling.
+#'   oversampling: interval between points on the mass axis = tolerance/oversampling.
 #'       nThreads: number of threads for parallel processing (by default maxCores-1)
 #'  imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
 #'  fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 #'
 #' @return a list: averageMz and averageIntensity
-#'            averageMz: array of masses at intervals of the tolerance/overSampling
+#'            averageMz: array of masses at intervals of the tolerance/oversampling
 #'     averageIntensity: array of average Gaussians values 
 #'     
 #' @export
-getAverageGaussianSpectrum<-function(dataFile, params)
+getAverageGaussianSpectrum<-function(data, params)
 {
-  if(!file.exists(dataFile))
+  if(missing(data))
+    stop("dataFile param not found\n")
+  if(class(data)=="character")
+  {
+    if(!file.exists(data))
+    {
+      stop("File not found\n")
+    }
+    else 
+    {
+      dataFile=data
+    }
+  }
+  else if(exists("dataFiles", where=data))
+  {
+    dataFile=data$dataFiles[1]
+  }
+  else
   {
     stop("File not found\n")
   }
-  
+
   if(missing(params))
   {
     params=list("SNR"=3, "noiseMethod"="estnoise_mad", "initMass"=0, "finalMass"=0,
-                "pxList"=c(), "nThreads"=0, "overSampling"=4, "imzMLChecksum"=F, "fixBrokenUUID"=F)
-    cat("defect parameters: SNR=3, noiseMethod=estnoise_mad, overSampling=4\n")
+                "pxList"=c(), "peakMethods"="uGaussians", "intMethod"="mean", "nThreads"=0, "oversampling"=10, "imzMLChecksum"=F, "fixBrokenUUID"=F)
+    cat("defect parameters: SNR=3, noiseMethod=estnoise_mad, oversampling=10\n")
   }
   else
   {
@@ -485,8 +530,14 @@ getAverageGaussianSpectrum<-function(dataFile, params)
     if(!(exists("nThreads", where=params)))
       params=c(params, "nThreads"=0)
     
-    if(!(exists("overSampling", where=params)))
-      params=c(params, "overSampling"=4)
+    if(!(exists("oversampling", where=params)))
+      params=c(params, "oversampling"=10)
+    
+    if(!(exists("intMethod", where=params)))
+      params=c(params, "intMethod"="mean")
+    
+    if(!(exists("peakMethod", where=params)))
+      params=c(params, "peakMethod"="uGaussians")
     
     if(!(exists("imzMLChecksum", where=params)))
       params=c(params, "imzMLChecksum"=F)
@@ -499,7 +550,7 @@ getAverageGaussianSpectrum<-function(dataFile, params)
   nThreads=params$nThreads
   imzMLChecksum=params$imzMLChecksum
   fixBrokenUUID=params$fixBrokenUUID
-  overSampling=params$overSampling
+  oversampling=params$oversampling
   
   if(nThreads>100)
   {
@@ -536,7 +587,7 @@ getAverageGaussianSpectrum<-function(dataFile, params)
       return(0)
     }
     
-    avSp=rGetAverageGaussianSpectrum(file, in_img$data$imzML, params, lowMz, highMz, params$pxList-1, overSampling, nThreads);
+    avSp=rGetAverageGaussianSpectrum(file, in_img$data$imzML, params, lowMz, highMz, params$pxList-1, oversampling, nThreads);
 
     pt<-proc.time() - pt
     display_processing_time(pt, "Data processing time")
@@ -550,22 +601,39 @@ getAverageGaussianSpectrum<-function(dataFile, params)
 #' @name getAverageSpectrum
 #' @title It obtains the average value of the intensities from all data into .imzML file.
 #'        Noise is not taken into account.
-#' @param dataFile: absolute reference to the file with the imzML extension.
+#' @param data -> a list from getPeakMatriz() or absolute reference to the file with the imzML extension.
 #' @param parmas:
 #'       initMass: initial  mass to consider. By default, the minimum value from the entire range of masses is used.
 #'      finalMass: final    mass to consider. By default, the maximum value from the entire range of masses is used.
 #'         pxList: list of pixels. First pixel=1. By default everyone.
-#'   overSampling: interval between points on the mass axis = tolerance/overSampling.
+#'   oversampling: interval between points on the mass axis = tolerance/oversampling.
 #'  imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
 #'  fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
 #'
 #' @return a list: averageMz and averageIntensity
-#'            averageMz: array of masses at intervals of the tolerance/overSampling
+#'            averageMz: array of masses at intervals of the tolerance/oversampling
 #'     averageIntensity: array of average Gaussians values 
 #' @export
-getAverageSpectrum<-function(dataFile, params)
+getAverageSpectrum<-function(data, params)
 {
-  if(!file.exists(dataFile))
+  if(missing(data))
+    stop("dataFile param not found\n")
+  if(class(data)=="character")
+  {
+    if(!file.exists(data))
+    {
+      stop("File not found\n")
+    }
+    else 
+    {
+      dataFile=data
+    }
+  }
+  else if(exists("dataFiles", where=data))
+  {
+    dataFile=data$dataFiles[1]
+  }
+  else
   {
     stop("File not found\n")
   }
@@ -573,8 +641,8 @@ getAverageSpectrum<-function(dataFile, params)
   if(missing(params))
   {
     params=list("SNR"=3, "noiseMethod"="estnoise_mad", "initMass"=0, "finalMass"=0,
-                "pxList"=c(), "nThreads"=0, "overSampling"=4, "imzMLChecksum"=F, "fixBrokenUUID"=F)
-    cat("defect parameters: SNR=3, noiseMethod=estnoise_mad, overSampling=4\n")
+                "pxList"=c(), "peakMethods"="uGaussians", "intMethod"="mean", "nThreads"=1, "oversampling"=6, "imzMLChecksum"=F, "fixBrokenUUID"=F)
+    cat("defect parameters: SNR=3, noiseMethod=estnoise_mad, oversampling=4\n")
   }
   else
   {
@@ -599,10 +667,16 @@ getAverageSpectrum<-function(dataFile, params)
       params=c(params, "pxList"=c(0))
     
     if(!(exists("nThreads", where=params)))
-      params=c(params, "nThreads"=0)
+      params=c(params, "nThreads"=1)
     
-    if(!(exists("overSampling", where=params)))
-      params=c(params, "overSampling"=4)
+    if(!(exists("oversampling", where=params)))
+      params=c(params, "oversampling"=6)
+    
+    if(!(exists("intMethod", where=params)))
+      params=c(params, "intMethod"="mean")
+    
+    if(!(exists("peakMethod", where=params)))
+      params=c(params, "peakMethod"="uGaussians")
     
     if(!(exists("imzMLChecksum", where=params)))
       params=c(params, "imzMLChecksum"=F)
@@ -612,16 +686,11 @@ getAverageSpectrum<-function(dataFile, params)
   }
   initMass=params$initMass
   finalMass=params$finalMass
-  nThreads=params$nThreads
   imzMLChecksum=params$imzMLChecksum
   fixBrokenUUID=params$fixBrokenUUID
-  overSampling=params$overSampling
+  oversampling=params$oversampling
   
-  if(nThreads>100)
-  {
-    cat("warning: max threads are 100\n")
-    nThreads=100;
-  }
+   nThreads=1;
   
   imgData <- NULL
   
@@ -654,7 +723,7 @@ getAverageSpectrum<-function(dataFile, params)
       return(0)
     }
     
-    avSp=rGetAverageSpectrum(file, in_img$data$imzML, params, lowMz, highMz, params$pxList-1, overSampling);
+    avSp=rGetAverageSpectrum(file, in_img$data$imzML, params, lowMz, highMz, params$pxList-1, oversampling, nThreads);
     
     pt<-proc.time() - pt
     display_processing_time(pt, "Data processing time")
@@ -848,7 +917,7 @@ saveContext<-function(samples, outBaseDir, params)
 #' @param data   -> a list from getPeakMatriz()
 #' @param sample    -> just download the matrix intensity from this sample.
 #' @return a matrix -> row = pixels; column=centroids
-
+#'
 getMatrix<-function(data, sample=1)
 {
   if(sample>length(data$dataFiles) || sample <1)

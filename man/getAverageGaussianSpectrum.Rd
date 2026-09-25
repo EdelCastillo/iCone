@@ -4,22 +4,22 @@
 \alias{getAverageGaussianSpectrum}
 \title{It obtains the average value of the Gaussian from all data into .imzML file.}
 \usage{
-getAverageGaussianSpectrum(dataFile, params)
+getAverageGaussianSpectrum(data, params)
 }
 \arguments{
-\item{dataFile:}{absolute reference to the file with the imzML extension.}
+\item{data}{-> a list from getPeakMatriz() or absolute reference to the file with the imzML extension.}
 
 \item{parmas:}{initMass: initial  mass to consider. By default, the minimum value from the entire range of masses is used.
 finalMass: final    mass to consider. By default, the maximum value from the entire range of masses is used.
 pxList: list of pixels. First pixel=1. By default everyone.
-overSampling: interval between points on the mass axis = tolerance/overSampling.
+oversampling: interval between points on the mass axis = tolerance/oversampling.
 nThreads: number of threads for parallel processing (by default maxCores-1)
 imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenice with really big files.
 fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).}
 }
 \value{
 a list: averageMz and averageIntensity
-averageMz: array of masses at intervals of the tolerance/overSampling
+averageMz: array of masses at intervals of the tolerance/oversampling
 averageIntensity: array of average Gaussians values
 }
 \description{

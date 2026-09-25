@@ -118,11 +118,17 @@ double NoiseEstimation::getSNR(double *spectro_p, int size, double *SNR_p)
 double NoiseEstimation::getNoise_mad(double *spectro_p, int size)
 {
   Common tools;
-  double add=0;
   double *smoothing_p=0, *ad_p=0;
-  smoothing_p=new double[size];
-  ad_p=new double[size];
-
+  try{
+      smoothing_p=new double[size];
+      ad_p=new double[size];
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
+  
   //Gaussian filter smoothing
   gaussSmoothing(spectro_p, size, smoothing_p);
  
@@ -151,8 +157,15 @@ double NoiseEstimation::getNoise_sd(double *spectro_p, int size)
   Common tools;
   double add=0;
   double *smoothing_p=0, *ad_p=0;
-  smoothing_p=new double[size];
-  ad_p=new double[size];
+  try{
+      smoothing_p=new double[size];
+      ad_p=new double[size];
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
 
   //smoothed by Gaussian filter.
   gaussSmoothing(spectro_p, size, smoothing_p);
@@ -176,7 +189,15 @@ double NoiseEstimation::getNoise_diff(double *spectro_p, int size)
 {
   Common tools;
   double *ad_p=0;
-  ad_p=new double[size];
+  try{
+      ad_p=new double[size];
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
+  
   if(size<2) return spectro_p[0];
   
   //differences between neighbors

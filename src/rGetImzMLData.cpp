@@ -125,8 +125,15 @@ DataFrame getPixelSpectrum(int pixel, const char* ibdFname, Rcpp::List imzML)
   int *sort_p=0;
   GetImzMLData myReader(ibdFname, imzML);
   int size=myReader.m_mzLength [pixel];
-  tmp_p=new double[size];
-  sort_p=new int[size];
+  try{
+      tmp_p=new double[size];
+      sort_p=new int[size];
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
   
   NumericVector mass(myReader.m_mzLength[pixel]), intensity(myReader.m_intLength[pixel]);
 //  myReader.m_myReader_p->readMzData (myReader.m_mzOffset [pixel], myReader.m_mzLength [pixel], mass.begin());

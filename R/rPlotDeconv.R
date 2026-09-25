@@ -54,7 +54,7 @@ rPlotGaussianSpectrum<-function(drawInfo, minMass=0, maxMass=0, sum=TRUE)
   logic=drawInfo$mass>=minX & drawInfo$mass<=maxX
   mass=drawInfo$mass[logic]
   intensity=c(0)
-  if(exists("intensity", where=drawInfo) && length(intensity)>1)
+  if(exists("intensity", where=drawInfo) && length(drawInfo$intensity)>1)
     intensity=drawInfo$intensity[logic]
   nPoints=length(mass)
   
@@ -581,4 +581,13 @@ rPlotIon<-function(intensity, coordinates)
   }
 }
 
-
+#' @export
+rPlotSum<-function(data, mzLow, mzHigh)
+{
+  initMass =nearestIndex(mzLow,  data$massAxis)
+  finalMass=nearestIndex(mzHigh, data$massAxis)
+#  X=seq(data$massAxis[initMass], data$massAxis[finalMass], by=data$deltaMass)
+  X=data$massAxis[initMass:finalMass]
+  Y=data$intAxis[initMass:finalMass]
+  plot(X, Y, type="l")
+}

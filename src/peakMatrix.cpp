@@ -19,525 +19,6 @@
 #include "peakMatrix.h"
 
 
-/// R METHODS ////////////////////////////////////////////////////////////////////////
-
-
-//' @name rGetCoordinatesFromFile()
-//' @title returns a matrix with the coordinates of all pixels (X/Y).
-//' If there are multiple samples, they appear sequentially; that is, the matrix has as many rows 
-//' as the cumulative number of pixels in each sample and two columns.
-//' @param file   -> file name with pixels coordinates (_pixelsCoord.bin)
-//' @param sample -> just download the pixels from this sample.
-//'                 if sample < 1, all sample coordinates are returned
-//' @return a matrix with the coordinates (X/Y) of pixels.
-//' 
-// [[Rcpp::export]]
-NumericMatrix rGetPixelsCoordinates(const char* fileName, int sample)
-{
-  std::fstream fp;
-  std::streampos initPos;
-  fp.open(fileName, std::fstream::in | std::ios::binary);
-  if(!fp.is_open())
-  {
-    char txt[200];
-    sprintf(txt, "Error: %s file could not be opened\n", fileName);
-    throw std::runtime_error(txt);
-  }
-  int totalSamples=0, nSamples, nSamplePixels, nPixels, coordSize=2*sizeof(int);
-  bool hit=true;
-  int pxTotal=0, pxIndex=0;
-  int pixelsSample[MAX_SAMPLES];
-  while(true) //first reading to obtain information.
-  {
-    fp.read((char*)&nSamplePixels, sizeof(int)); //#pixels into the sample
-    if(fp.eof()) break;
-    fp.seekg((std::streampos)nSamplePixels*2*sizeof(int), std::ios_base::cur);
-    if(fp.fail()) 
-    {
-      printf("Error while reading in %s", fileName);
-      fp.close(); return 0;
-    }
-    
-    pixelsSample[totalSamples++]=nSamplePixels;
-    pxTotal+=nSamplePixels;
-  }
-
-  sample--; //to C++
-  if(sample>totalSamples)
-  {
-    printf("warning: max samples in file are %d\n", nSamples);
-    fp.close();
-    return 0;
-  }
-  
-  //get pixels range from sample parameter
-  int initPx=0;
-  if(sample<0) //all samples
-  {
-    nSamples=totalSamples; 
-    initPos=0;
-    printf("The %d samples are considered.\n", nSamples);
-  }
-  else //only one sample
-  {
-    nSamples=1;
-    for(int i=0; i<sample; i++)
-    {
-      initPos+=(1+pixelsSample[i]*2)*(std::streampos)sizeof(int); //#px, X0/Y0, X1/Y1, ...
-    }
-    pxTotal=pixelsSample[sample];
-  }
-
-  NumericMatrix pxCoord(pxTotal, 2);
-  fp.close(); //If you exit with an error, you need to close the file.
-  
-  //second reading to obtain the coordinates.
-  fp.open(fileName, std::fstream::in | std::ios::binary); //reopen
-  fp.seekg(initPos, std::ios_base::beg); //file position
-  if(fp.fail()) 
-  {
-    printf("Error while reading in %s", fileName);
-    fp.close(); return 0;
-  }
-  
-  int xy[2];
-  
-  for(int sample=0; sample<nSamples; sample++) //for all samples
-  {
-    fp.read((char*)&nPixels, sizeof(int)); //#pixels into the sample
-    for(int pxSample=0; pxSample<nPixels; pxSample++) //for each pixel into the sample
-      {
-      fp.read((char*)xy, 2*sizeof(int)); //XY coordinate
-      if(fp.fail()) 
-      {
-        printf("Error while reading in %s", fileName);
-        fp.close(); return 0;
-      }
-      pxCoord(pxIndex,0)  =xy[0];
-      pxCoord(pxIndex++,1)=xy[1];
-      if(fp.fail() || fp.bad()) //fault control
-        {
-          char txt[200];
-          sprintf(txt, "Error: %s file could not be read completely.", fileName);
-          throw std::runtime_error(txt);
-          hit =false; break;
-        }
-        
-        if(fp.eof() || !hit) break;
-      }
-  }
-  
-  if(pxIndex!=pxTotal) printf("warning: not all coordinates were loaded.\n");
-  fp.close();
-  return pxCoord;
-}
-
-
- //' @name rGetCentroidsFromFile()
- //' @title returns info of centroids from the peak matrix file: 
- //' 
- //' @param file -> file name with peak matrix (_peakMatrix.bin)
- //' @return a list:
- //'      mass: vector of centroids
- //'      intensity: vector of average intensities of all pixels associated to centroid
- //'      tolerance: vector of tolerances od aech centroid
- //'      pixelsSupport: vector of pixels that support the centroid.
- //'      pixelsSample: vector of number of pixels into samples
- 
- // [[Rcpp::export]]
- List rGetBasic(const char* file)
- {
-   std::fstream fp;
-   std::streampos pos, colSize;
-   int nSamples, totalPx, nIons;
-   bool hit=true;
-   fp.open(file, std::fstream::in | std::ios::binary);
-   if(!fp.is_open())
-   {
-     char txt[200];
-     sprintf(txt, "Error: The internal %s file could not be created.\n The peak matrix cannot be saved.\n", file);
-     throw std::runtime_error(txt);
-   }
-   fp.read((char*)&nSamples, sizeof(int)); //samples number
-   fp.read((char*)&totalPx,  sizeof(int)); //total pixels in all samples
-   fp.read((char*)&nIons,    sizeof(int)); //ions number
-   
-   NumericVector mass(nIons);
-   NumericVector intensity(nIons);
-   NumericVector tolerance(nIons);
-   IntegerVector pxSupport(nIons);
-   IntegerVector pixelsSample(nSamples);
-   
-   int pxSize;
-   for(int i=0; i<nSamples; i++)
-   {
-     fp.read((char*)&pxSize, sizeof(int));
-     pixelsSample[i]=pxSize;
-   }
-
-   int index=0, tmpPxSupport;
-   double tmpMass, tmpIntensity, tmpTolerance;
-   std::streampos ionPos=(3+nSamples)*sizeof(int);
-   
-   while(index<nIons)
-   {
-     if(fp.eof()) break;
-     fp.seekg(ionPos, std::ios_base::beg);
-     if(fp.fail() || fp.bad()) //fault control
-     {
-       char txt[200];
-       sprintf(txt, "Error: %s file could not be read completely.", file);
-       throw std::runtime_error(txt);
-       hit =false; break;
-     }
-     fp.read((char*)&tmpMass, sizeof(double));
-     fp.read((char*)&tmpIntensity, sizeof(double));
-     fp.read((char*)&tmpTolerance, sizeof(double));
-     fp.read((char*)&tmpPxSupport, sizeof(int));
-     if(fp.fail()) 
-     {
-       printf("Error while reading in %s", file);
-       fp.close(); return 0;
-     }
-     mass[index]=tmpMass;
-     intensity[index]=tmpIntensity;
-     tolerance[index]=tmpTolerance;
-     pxSupport[index]=tmpPxSupport;
-//printf("[%3d]%.4f\n", index, tmpMass);
-     index++;
-     ionPos=fp.tellg()+(std::streampos)(tmpPxSupport*(sizeof(int)+sizeof(double)));
-   }
-   fp.close();
-   List ret=List::create(Named("mass")=mass, Named("intensity")=intensity,  Named("tolerance")=tolerance, 
-                         Named("pixelsSupport")=pxSupport, Named("pixelsSample")=pixelsSample);
-   return ret;
- }
-
- //' @name rGetCentroid()
- //' @title returns a column information of the peak matrix. only non-zero pixels. 
- //' 
- //' @param file     -> file name with peak matrix (_peakMatrix.bin)
- //' @param mass     -> reference to the desired initial column of the peak matrix (Da).
- //' @param sample   -> just download the pixels intensity from this sample.
- //' @param expand   -> if true,  it returns the intensity values for all the pixels in the sample.
- //'                    if false, it returns the intensity values only for the sample pixels with non-zero values.
- //'                       in this case, return two vectors: intensity and pixel
- //'                    if sample is out of limits, pixels from all samples are returned
- //' @return a list:
- //'     intensity: vector of intesities 
- //'         pixel: pixel associated with intensity.
- //'          mass: mass of ion
- //'     tolerance: centroid tolerance (ppm).
-
- // [[Rcpp::export]]
- List rGetCentroid(const char* file, double mass, int sample, bool expand)
- {
-   std::fstream fp;
-   std::streampos ionPos, colSize, offset;
-   int nSamples, totalPx, nIons, massIndex;
-   Common common;
-   double *massAxis_p=0;
-   int *colSize_p=0, ion;
-   bool allSamples=false;
-   
-   fp.open(file, std::fstream::in | std::ios::binary);
-   if(!fp.is_open())
-   {
-     char txt[200];
-     sprintf(txt, "Error: The internal %s file could not be created.\n The peak matrix cannot be saved.\n", file);
-     throw std::runtime_error(txt);
-   }
-    //metadata
-   fp.read((char*)&nSamples, sizeof(int)); //samples number
-   fp.read((char*)&totalPx,  sizeof(int)); //total pixels in all samples
-   fp.read((char*)&nIons,    sizeof(int)); //ions number
-   int pxSample[nSamples];
-   fp.read((char*)pxSample,  nSamples*sizeof(int)); //px in each sample
-   if(fp.fail()) 
-   {
-     printf("Error while reading in %s", file);
-     fp.close(); return 0;
-   }
-   
-   //px range to load
-   int pxLow=0, pxHigh=-1;
-   if(sample<0 || sample>=nSamples) //all column pixel
-   {
-    for(int i=0; i<nSamples; i++)
-       pxHigh+=pxSample[i];
-   }   
-   else
-    {
-    for(int i=0; i<nSamples; i++)
-    {
-     pxLow=pxHigh+1;
-     pxHigh=pxLow+pxSample[i]-1;
-     if(i==sample) break;
-    }
-    }
-   offset=fp.tellg(); //file position
-
-   //mass axis and size of columns
-    massAxis_p=new double[nIons];
-    colSize_p=new int[nIons];
-     double tmpIntensity, tmpTolerance;
-     int nPx;
-     for(int ion=0; ion<nIons; ion++)
-     {
-        fp.read((char*)&massAxis_p[ion], sizeof(double));
-        fp.read((char*)&tmpIntensity, sizeof(double));
-        fp.read((char*)&tmpTolerance, sizeof(double));
-        fp.read((char*)&nPx, sizeof(int));
-        if(fp.fail()) 
-        {
-          printf("Error while reading in %s", file);
-          fp.close(); return 0;
-        }
-        colSize_p[ion]=3*sizeof(double)+sizeof(int)+nPx*(sizeof(int)+sizeof(double)); //columns size
-
-        fp.seekg((std::streampos)(nPx*(sizeof(int)+sizeof(double))), std::ios_base::cur);
-     }
-     //nearest index to mass
-      massIndex =common.nearestIndex(mass, massAxis_p, nIons); //sort up
-
-     //column position into file
-     ionPos=offset; //first column input
-     for(int i=0; i<massIndex; i++)
-       ionPos+=(std::streampos)(colSize_p[i]); //offset to column
-     ionPos+=(std::streampos)(2*sizeof(double));
-     fp.seekg(ionPos, std::ios_base::beg); //positioning
-     fp.read((char*)&tmpTolerance, sizeof(double)); //size of column
-     fp.read((char*)&nPx, sizeof(int)); //size of column
-     if(fp.fail()) 
-     {
-       printf("Error while reading in %s", file);
-       fp.close(); return 0;
-     }
-     
-    double *intensity_p=0;
-    int *pixel_p=0;
-    intensity_p=new double[nPx];
-    pixel_p=new int[nPx];
-    
-    int tmpPixel, pxSize=0;
-    //data load
-    for(int i=0; i<nPx; i++) //data load
-     {
-      fp.read((char*)&tmpPixel, sizeof(int));
-      fp.read((char*)&tmpIntensity, sizeof(double));
-      if(fp.fail()) 
-      {
-        printf("Error while reading in %s", file);
-        fp.close(); return 0;
-      }
-      if(tmpPixel>=pxLow && tmpPixel<=pxHigh) //pixel into range?
-        {
-        pixel_p[pxSize]=tmpPixel-pxLow;
-        intensity_p[pxSize++]=tmpIntensity;
-        }
-     }
-    List ret;
-    //link to R
-    if(expand)
-    {
-      int pxIntoSample=pxSample[sample];
-
-      NumericVector intensity(pxIntoSample);
-      for(int i=0; i<pxIntoSample; i++) intensity[i]=0;
-      for(int i=0; i<pxSize; i++)
-      {
-        intensity[pixel_p[i]]=intensity_p[i];
-      }
-      ret=List::create(Named("mass")=massAxis_p[massIndex], Named("tolerance")=tmpTolerance, 
-                            Named("intensity")=intensity);
-    }
-    else
-    {
-      NumericVector intensity(pxSize);
-      IntegerVector pixel(pxSize);
-      for(int i=0; i<pxSize; i++)
-      {
-        intensity[i]=intensity_p[i];
-        pixel[i]=pixel_p[i];
-      }
-      ret=List::create(Named("mass")=massAxis_p[massIndex], Named("tolerance")=tmpTolerance, 
-                            Named("intensity")=intensity, Named("pixel")=pixel+1);  //+1 to R
-    }
-    fp.close();
-    if(massAxis_p)    delete []massAxis_p;
-    if(colSize_p)     delete []colSize_p;
-    if(pixel_p)       delete []pixel_p;
-    if(intensity_p)   delete []intensity_p;
-    return ret;
- }
-
-
- //' @name rGetMatrix()
- //' @title returns the intensity matrix associated with a given sample. 
- //' 
- //' @param file      -> file name with peak matrix (_peakMatrix.bin)
- //' @param sample    -> just download the matrix intensity from this sample.
- //' @return a matrix -> row = pixels; column=centroids
-
- // [[Rcpp::export]]
- NumericMatrix rGetMatrix(const char* file, int sample)
- {
-   std::fstream fp;
-   std::streampos ionPos, colSize, offset;
-   int totalSamples, totalPx, totalIons, massIndex;
-   Common common;
-   double *massAxis_p=0;
-   int *colSize_p=0, ion;
-   bool allSamples=false;
-   
-   fp.open(file, std::fstream::in | std::ios::binary);
-   if(!fp.is_open())
-   {
-     char txt[200];
-     sprintf(txt, "Error: The internal %s file could not be created.\n The peak matrix cannot be saved.\n", file);
-     throw std::runtime_error(txt);
-   }
-   //metadata
-   fp.read((char*)&totalSamples, sizeof(int)); //samples number
-   fp.read((char*)&totalPx,  sizeof(int)); //total pixels in all samples
-   fp.read((char*)&totalIons,    sizeof(int)); //ions number
-   if(fp.fail()) 
-   {
-     printf("Error while reading in %s", file);
-     fp.close(); return 0;
-   }
-   if(sample<0 || sample>=totalSamples) 
-   {
-     printf("sample out of limits [%d/%d]\n", 0, totalSamples-1);
-     fp.close(); return 0;
-   }
-   int pxSample[totalSamples];
-   fp.read((char*)pxSample,  totalSamples*sizeof(int)); //px in each sample
-
-   //la info en disco se organiza por centriodes.
-   //cada centroide está acompañado de una lista de píxeles de todas las muestras en formato pixel-intensidad
-   //para separarlos, se deben conocer en rango de píxeles asociado a cada muestra
-   
-   //se delimitan los pixeles mínimo y máximo en cada muestra
-   PIXEL_XY samplesPxLimit[totalSamples]; //x -> low; y -> high
-   int pxLow, pxHigh;
-   samplesPxLimit[0].x=0;
-   samplesPxLimit[0].y=pxSample[0]-1;
-   pxLow=pxSample[0];
-   for(int i=1; i<totalSamples; i++)
-   {
-     samplesPxLimit[i].x=samplesPxLimit[i-1].y+1;
-     samplesPxLimit[i].y=samplesPxLimit[i].x+pxSample[i]-1;
-   }
-   //se copia la info a la matriz
-   NumericMatrix pkMat(pxSample[sample], totalIons); //filas, columnas
-   double tmpMass, tmpIntensity, tmpTolerance;
-   int tmpPx, nPx;
-   
-   for(int ion=0; ion<totalIons; ion++) //para cada centroide
-   {
-     for(int i=0; i<pxSample[sample]; i++) //puesta cero de la columna
-       pkMat(i, ion)=0;
-     
-     //info de este centroide
-     fp.read((char*)&tmpMass, sizeof(double));
-     fp.read((char*)&tmpIntensity, sizeof(double));
-     fp.read((char*)&tmpTolerance, sizeof(double));
-     fp.read((char*)&nPx, sizeof(int));
-     if(fp.fail()) 
-     {
-       printf("Error while reading in %s", file);
-       fp.close(); return 0;
-     }
-     pxLow=samplesPxLimit[sample].x; //rango de píxeles de interés
-     pxHigh=samplesPxLimit[sample].y;
-     for(int i=0; i< nPx; i++)
-     {
-       fp.read((char*)&tmpPx, sizeof(int));
-       fp.read((char*)&tmpIntensity, sizeof(double));
-       if(fp.fail()) 
-       {
-         printf("Error while reading in %s", file);
-         fp.close(); return 0;
-       }
-       if(tmpPx>=pxLow && tmpPx<=pxHigh)
-         pkMat(tmpPx-pxLow, ion)=tmpIntensity;
-     }
-   }
-   fp.close();
-   return (pkMat);
- }
-
-
-/// R METHOD ////////////////////////////////////////////////////////////////////////
-
-//'
- //'  @name peakMatrixR
- //'  @title construct the peak matrix. It requires the prior contribution of Class RawToGaussians.
- //'  
- //'  @param  "baseDir": directory for report files 
- //'  @param     params: specific parameters
- //'        "tolerance": desired mass tolerance for binning.
- //' "minPixelsSupport": minimum percentage of pixels that must support an ion for it to be considered.
- //'  @param      mzLow: lower  mass to consider
- //'  @param     mzHigh: higher mass to consider
- //'  @param    nPixels: total pixels
- //'  @param  pxSamples: vector containing the number of pixels for each sample
- //'  @param   nSamples: Number of samples
- //'  @return   Number of centroids
- //'     
- // [[Rcpp::export]]
-List peakMatrixR(Rcpp::String baseDir, Rcpp::List params, double mzLow, double mzHigh, int nPixels, IntegerVector pxSamples, int nSamples)
-{
-  NumericVector nv;
-  nv=params["tolerance"];
-  double tolerance=nv[0];
-
-  //minimum percentage of pixels that must support a centroid.
-  nv=params["minPixelsSupport"]; 
-  double pxSupport=nv[0]*nPixels/100.0;
-
-  CharacterVector cv;
-  cv=params["intMethod"];
-  int intMethod=0;
-  if(cv[0]=="max")
-    intMethod=1;
-  else
-    intMethod=0; //mean
-  
-  
-  //conversion Rcpp::String to char*
-  char *baseDir2=new char[200];
-  char *fileName=new char[200];
-  strcpy(baseDir2, (char*)baseDir.get_cstring());
- 
-  int *pxSamples_p=0;
-  pxSamples_p=new int[nSamples];
-  for(int i=0; i<nSamples; i++)
-  {
-    pxSamples_p[i]=pxSamples[i];
-  }
-  
-  printf("\tphase 2:   binning (with bin tolerance=%6.2f ppm)(%%): 00 ", tolerance);
-  
-  PeakMatrix peakMatrix(nPixels, 1e6/tolerance, mzLow, mzHigh, pxSupport, pxSamples_p, nSamples, baseDir2, intMethod);
-
-  //Loading the Gaussians generated by the RawToGaussians class from a temporary file.
-  strcpy(fileName, baseDir2);
-  strcat(fileName, (char*)"_gaussians.bin");
-  int totalPx=peakMatrix.loadGaussians(fileName);
-  if(totalPx<0 || totalPx!=nPixels) //Some pixels might be empty
-  {
-    printf("ERROR: fail of consistence in pixels number\n");
-    return -1;
-  }
-  int nCentroids=peakMatrix.getCentroids();//get centroids a save it to file
-  
-  if(baseDir2) delete []baseDir2;
-  if(fileName) delete []fileName;
-  if(pxSamples_p) delete []pxSamples_p;
-  return nCentroids;
-}
 
 //Constructor
  //'  @param totalPixels: total pixels for all samples
@@ -550,31 +31,42 @@ List peakMatrixR(Rcpp::String baseDir, Rcpp::List params, double mzLow, double m
  //'  @param   nSamples: Number of samples
  //'  @param    baseDir: Directory for data files
  //'  @param  intMethod: intensity values for the binning stage: mean, max
-  PeakMatrix::PeakMatrix(int totalPixels, double massResolution, double mzLow, double mzHigh, double pxSupport, int *pxSamples_p, int nSamples, char *baseDir, int intMethod)
+ //'  @param   nThreads: number of threads for parallel processing
+  PeakMatrix::PeakMatrix(int totalPixels, double tolerance, double mzLow, double mzHigh, double pxSupport, int *pxSamples_p, int nSamples, char *baseDir, int intMethod, int nThreads)
 {
   m_totalPixels=totalPixels; //It is also set in the loadGaussians() function.
   m_nSamples=nSamples;
   m_pxSamples_p=pxSamples_p;
-  m_massResolution=massResolution;
+  m_tolerance=tolerance;
   m_mzHigh=mzHigh;
   m_mzLow=mzLow;
   m_baseDir=baseDir;
   m_gaussians_p=0;
   m_massRange_p=0;
-  m_centers_p=0;
-  m_centersSize_p=0;
   m_pxSupport=pxSupport;
   m_pixelsCoordinates_p=0;
   m_intMethod=intMethod;
+  m_centroidsGaussians_p=0;
+  m_MRthr_p=0;
+  m_MRthr_p=new MASS_RANGE[nThreads];
+  m_MR_p=0;
+  m_massAxis_p=0;
+  m_spectro.SNR_p=0;
+  m_nThreads=nThreads;
+  m_centroids_p=new GAUSS_SP[nThreads];
+  for(int i=0; i<nThreads; i++) {m_centroids_p[i].gauss_p=0; m_centroids_p[i].size=0;}
+  for(int i=0; i<MAX_THREADS; i++)
+  {
+    m_thread_p[i]=0;
+    m_status[i]=0; 
+  }
 }
 
 //Destructor
 PeakMatrix::~PeakMatrix()
 {
   //printf("PeakMatrix destructor init\n");
-  if(m_centers_p) delete []m_centers_p;
-  if(m_centersSize_p) delete []m_centersSize_p;
- 
+
   if(m_gaussians_p)
   {
     for(int i=0; i<m_totalPixels; i++)
@@ -583,50 +75,21 @@ PeakMatrix::~PeakMatrix()
     }
     delete []m_gaussians_p;
   }
-
+  if(m_centroidsGaussians_p) delete []m_centroidsGaussians_p;
   if(m_pixelsCoordinates_p) delete[] m_pixelsCoordinates_p;
  
+  if(m_centroids_p)
+  {
+    for(int i=0; i<m_nThreads; i++) if(m_centroids_p[i].gauss_p) delete [] m_centroids_p[i].gauss_p;
+    delete [] m_centroids_p;
+  }
+  if(m_spectro.SNR_p) delete [] m_spectro.SNR_p;
+  if(m_MRthr_p)     delete [] m_MRthr_p;
+  if(m_MR_p)        delete [] m_MR_p;
+  if(m_massAxis_p)  delete [] m_massAxis_p;
+  
   //printf("PeakMatrix destructor finish\n");
 }
-
-//generate de peak matrix with the centroids, their tolerance, and the number of support pixels.  
-int PeakMatrix::getCentroids()
-{
-  int nCenters=0; //número de mzMax(gaussianas) sobre toda la muestra
-  
-  for(int px=0; px<m_totalPixels; px++)//for all pixels
-  {
-    if(m_gaussians_p[px].gauss_p!=0) 
-      nCenters+=m_gaussians_p[px].size;
-  }
-  
-  double *mass_p=new double[nCenters];
-  int *px_p=new int[nCenters];
-  double *intensity_p=new double[nCenters];
-//  for(int i=0; i<nCenters; i++) intensity_p[i]=0;
-  
-  //gaussians to vectors
-  nCenters=getCentroidsIntoRange(mass_p, px_p, intensity_p, nCenters);
-  
-  double deltaMass=m_mzLow/(m_massResolution); //delta=1/2 of the minimum mass increment of the spectrometer
-
-  int massAxisSize; 
-  massAxisSize=nCenters;
-  
-  double tolerance=1e6/m_massResolution;
-  
-  m_centers_p=new double[massAxisSize];
-  m_centersSize_p=new int[massAxisSize];
-  
-  //get all centroids (binning)
-  m_nCentroids=centers(mass_p, px_p, intensity_p, nCenters, tolerance);
-  
-  if(mass_p)      delete [] mass_p;
-  if(px_p)        delete [] px_p;
-  if(intensity_p) delete [] intensity_p;
-  return m_nCentroids;
-}
-
 
 //Load the file with information about the Gaussian curves associated with each pixel
 //If there is more than one sample, all its pixels are integrated
@@ -642,17 +105,17 @@ int PeakMatrix::loadGaussians(char *fileName)
     sprintf(txt, "Error: %s file could not be opened.\n", fileName);
     throw std::runtime_error(txt);
   }
-  int nSamplePixels, nPixels, nPxGauss;
+  int nSamplePixels, nPxGauss;
   int gaussSize=3*sizeof(double);
   bool hit=true;
   
-  int pxTotal=0, pxIndex=0, nSamples=0;
-  int pixelsSample[MAX_SAMPLES];
+  int pxTotal=0, pxIndex=0;
+//  int pixelsSample[MAX_SAMPLES];
   while(true) //first reading to obtain information.
   {
     fp.read((char*)&nSamplePixels, sizeof(int)); //#pixels into the sample
     if(fp.eof()) break;
-    pixelsSample[nSamples++]=nSamplePixels;
+//    pixelsSample[nSamples++]=nSamplePixels;
     pxTotal+=nSamplePixels;
     for(int pxSample=0; pxSample<nSamplePixels; pxSample++) //for each pixel of the sample 
     {
@@ -666,8 +129,15 @@ int PeakMatrix::loadGaussians(char *fileName)
   
   //second reading to obtain the coordinates.
   fp.open(fileName, std::fstream::in | std::ios::binary); //reopen
+  try{
+      m_gaussians_p=new GAUSS_SP[pxTotal]; //array of structs
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
   
-  m_gaussians_p=new GAUSS_SP[pxTotal]; //array of structs
   for(int i=0; i<pxTotal; i++) {m_gaussians_p[i].gauss_p=0; m_gaussians_p[i].size=0;}  
   //  int totalGaussians=0;
   
@@ -681,8 +151,16 @@ int PeakMatrix::loadGaussians(char *fileName)
       if(fp.eof()) break;
       m_gaussians_p[pxIndex].size=nPxGauss; 
       if(nPxGauss==0) {pxIndex++; continue;}//px without conten
-
+      
+      try{
       m_gaussians_p[pxIndex].gauss_p=new GAUSS_PARAMS[nPxGauss]; //memory
+      }
+      catch(const std::bad_alloc& e)
+      {
+        printf("Error reserving memory: %s\n",e.what());
+        return 0;
+      }
+      
       fp.read((char*)m_gaussians_p[pxIndex].gauss_p, nPxGauss*gaussSize ); //load
       
       if(fp.eof() || fp.fail() || fp.bad()) //boundary control
@@ -701,230 +179,6 @@ int PeakMatrix::loadGaussians(char *fileName)
   m_totalPixels=pxIndex;
   return pxIndex;
 }
-
-//Determines the centers of groups of values whose distance does not exceed a given tolerance.
-//     mass_p: vector masses.
-//       px_p: vector of pixels.
-//intensity_p: vector of intensities
-//       size: vectors length
-// tolerance: maximum bin size (ppm).
-// Returns the number of centers detected (length of the centers_p array).
-//Formato: 
-//cabecera: totalSamples|totalPx|totalMass|pxSample 0, 1,...|
-//para cada ion: mass|intensity|tolerance|pxSupport|px1-int1, px2-int2,...|
-int PeakMatrix::centers(double *mass_p, int *px_p, double *intensity_p, int size, double tolerance)
-{ 
-  if(size<=0) return 0;
-  if(m_nSamples<=0) return -1;
-  
-  std::fstream fp;
-  char fileName[200];
-  strcpy(fileName, m_baseDir);
-  strcat(fileName, (char*)"_peakMatrix.bin");
-  fp.open(fileName, std::fstream::out | std::ios::binary | std::ios::trunc);
-  int tmp=0;
-  double kk;
-  
-  if(!fp.is_open())
-  {
-    char txt[250];
-    sprintf(txt, "Error: The internal file %s could not be created.\n The peak matrix cannot be saved.\n", fileName);
-    throw std::runtime_error(txt);
-  }
-  fp.write((char*)&m_nSamples, sizeof(int)); //samples number
-  fp.write((char*)&m_totalPixels, sizeof(int)); //space for matrix rows
-  fp.write((char*)&tmp, sizeof(int)); //space for matrix cols
-  for(int i=0; i<m_nSamples; i++)
-  {
-    fp.write((char*)&m_pxSamples_p[i], sizeof(int)); //space for pixel number into each sample
-  }
-
-  int *sortedIndex_p=0;
-  sortedIndex_p=new int[size];
-  int *massIndex_p=new int[size];
-  
-  int *tmpPx_p=new int[size];
-  int *tmpPxIndex_p=new int[size];
-
-  Common common;
-  common.sortUp(mass_p, sortedIndex_p, size); //increasing ordering of masses.
-
-  m_centers_p[0]=mass_p[sortedIndex_p[0]];
-
-  m_centersSize_p[0]=1;
-  massIndex_p[0]=sortedIndex_p[0];
-  double segmentSize=m_centers_p[0]*tolerance/1e6;
-  double centroidTolerance;
-
-  int nIons=0, ionSize=0, mi=0;
-  double massDiff;
-  int totalPixels=0;
-  int repesCount=0, tmpCount=0;
-  bool repes=false;
-  std::streampos initPos, finalPos;
-  int vez=1;
-  
-  for(int i=1; i<size; i++) //iterative averaging.
-  {
-    //avance
-    if((double)i/(double)size>vez*0.1) {if(vez<10) printf("%d ", vez*10); vez++;}
-    
-    massDiff=fabs(mass_p[sortedIndex_p[i]]-m_centers_p[nIons]);
-    if(massDiff<segmentSize)
-    {
-      m_centers_p[nIons]=(1.0/((double)m_centersSize_p[nIons]+1.0))*((double)m_centersSize_p[nIons]*m_centers_p[nIons]+mass_p[sortedIndex_p[i]]);
-      massIndex_p[mi]=sortedIndex_p[i];
-      m_centersSize_p[nIons]++; //masas en el bin
-      mi++;
-    }
-    else //new bin
-    {
-      if(m_centersSize_p[nIons]>=m_pxSupport)     
-      {
-        //The results for the ion are noted:
-        //Analysis of centroid average intensity and dispersion.
-        double intensity=0, dispersion=0, pxIntensity;
-        int iMass;
-        for(int j=0; j<m_centersSize_p[nIons]; j++)
-        {
-          iMass=massIndex_p[j];
-          dispersion+=(mass_p[iMass] - m_centers_p[nIons])*(mass_p[iMass] - m_centers_p[nIons]);
-        }
-        dispersion=sqrt(dispersion/m_centersSize_p[nIons]);
-        
-        fp.write((char*)&m_centers_p[nIons], sizeof(double)); //centroid mass
-        initPos=fp.tellg();
-        fp.write((char*)&intensity, sizeof(double));      //centroid intensity
-        centroidTolerance=1e6*dispersion/m_centers_p[nIons];  
-        fp.write((char*)&centroidTolerance, sizeof(double)); //centroid tolerance (ppm)
-        fp.write((char*)&m_centersSize_p[nIons], sizeof(int)); //px number support
-        
-        //px intensities
-        for(int k=0; k<m_centersSize_p[nIons]; k++) //copy of intensities
-        {
-          iMass=massIndex_p[k];
-          int px=px_p[iMass]; //pixel of the Gaussian.
-          tmpPx_p[k]=px;
-        }
-        //Puede que dentro de un mismo bin exista más de una gaussiana para el mismo pixel
-        //se genera una intensidad representativa
-        common.sortUpI(tmpPx_p, tmpPxIndex_p, m_centersSize_p[nIons]); //increasing ordering of pixeles.
-        bool into=false;
-        int first=-1, last=-1;
-        for(int k=0; k<m_centersSize_p[nIons]-1; k++) //para todas las masas del bin
-        {
-          int px=tmpPx_p[tmpPxIndex_p[k]]; //px asociado a 
-          if(px==tmpPx_p[tmpPxIndex_p[k+1]]&& into==false) 
-            {into=true; first=k; last=-1;}
-          if(into==true && px!=tmpPx_p[tmpPxIndex_p[k+1]])
-            {into=false; last=k;}
-          if(into==true && k+2==m_centersSize_p[nIons])
-            {into=false; last=k+1;}
-
-         if(into==false)
-          {
-           double pxIntensity=0;
-           if(first!=-1 && last!=-1) //px coinciden en la secuencia
-              {
-             repesCount+=last-first+1;
-              int px=tmpPx_p[tmpPxIndex_p[k]];
-              if(m_intMethod==MEAN) //mean  
-              {
-                for(int j=first; j<=last; j++)
-                {
-                  int pxIdx_a=tmpPxIndex_p[j];
-                  int pxIdx_b=massIndex_p[pxIdx_a];
-                  pxIntensity+=intensity_p[pxIdx_b];
-                }
-                             
-                pxIntensity/=(last-first+1);
-              }
-              else if(m_intMethod==MAX) //max value
-              {
-                double intValue;
-                pxIntensity=0;
-                for(int j=first; j<=last; j++)
-                {
-                  int pxIdx_a=tmpPxIndex_p[j];
-                  int pxIdx_b=massIndex_p[pxIdx_a];
-                  intValue=intensity_p[pxIdx_b];
-                  if(intValue>pxIntensity) pxIntensity=intValue; 
-                }
-              }
-              //intensidad representativa del grupo
-              fp.write((char*)&px, sizeof(int)); //px 
-              fp.write((char*)&pxIntensity, sizeof(double)); //px intensity
-              first=-1; last=-1;
-              ionSize++;
-            }
-           
-            else //px difieren
-            {
-              px=tmpPx_p[k];
-              pxIntensity=intensity_p[massIndex_p[k]];
-              fp.write((char*)&px, sizeof(int)); //px 
-              fp.write((char*)&pxIntensity, sizeof(double)); //px intensity
-              ionSize++;
-            }
-          }
-          
-        }
-          //save info to disk
-          finalPos=fp.tellg();
-          if(m_intMethod==MAX)
-          {
-            intensity=0;
-            for(int i=0; i<ionSize; i++)
-              if(intensity_p[i]>intensity) intensity=intensity_p[i];
-            fp.seekg(initPos, std::ios_base::beg);
-            fp.write((char*)&intensity, sizeof(double)); //px in centroid
-            fp.seekg(sizeof(double), std::ios_base::cur); //saltamos la tolerancia
-          }
-          else
-          //if(intMethos==MEAN)
-          {
-            intensity=0;
-            for(int i=0; i<ionSize; i++)
-                intensity+=intensity_p[i];
-            if(ionSize>0)
-              intensity/=(double)ionSize;
-            else intensity=0;
-            fp.seekg(initPos, std::ios_base::beg);
-            fp.write((char*)&intensity, sizeof(double)); //px in centroid
-            fp.seekg(sizeof(double), std::ios_base::cur); //saltamos la tolerancia
-          }
-          totalPixels+=ionSize;
-          fp.write((char*)&ionSize, sizeof(int)); //px in centroid
-          fp.seekg(finalPos, std::ios_base::beg);
-          ionSize=0;
-          nIons++;
-      }
-      //new centroid
-      mi=1;
-      segmentSize=mass_p[sortedIndex_p[i]]*tolerance/1e6;
-      m_centers_p[nIons]=mass_p[sortedIndex_p[i]];
-      m_centersSize_p[nIons]=1;
-      massIndex_p[0]=sortedIndex_p[i];
-    }
-           
-  }
-  printf("100\n");
-  printf("\t\t\ttotal centroids:%d\n", nIons);
-  printf("\t\t\ttotal number of Gaussians in the same pixel within a bin=%d; \n", repesCount);
-  fp.seekg(sizeof(int), std::ios_base::beg);
-  fp.write((char*)&m_totalPixels, sizeof(int));
-  fp.write((char*)&nIons, sizeof(int));
-  fp.close();
-  
-  if(sortedIndex_p) delete [] sortedIndex_p;
-  if(massIndex_p)   delete [] massIndex_p;
-  if(tmpPx_p)       delete [] tmpPx_p;
-  if(tmpPxIndex_p)  delete [] tmpPxIndex_p;
-  m_nIons=nIons;
-  
-  return nIons;
-}
-
 
 //getCentroidsIntoRange()
 //Extracts information from all existing Gaussians in m_gaussians_p.
@@ -971,11 +225,19 @@ int PeakMatrix::loadPixelsCoordinates(char *fileName, int totalPixels)
     sprintf(txt, "Error: %s file could not be opened\n", fileName);
     throw std::runtime_error(txt);
   }
-  int nSamplePixels, nPixels, nPxGauss, coordSize=2*sizeof(int);
+  int nSamplePixels, coordSize=2*sizeof(int);
   bool hit=true;
   
 //  int nSamples=0;
-  m_pixelsCoordinates_p=new PIXEL_XY[totalPixels]; //coordinates
+  try{
+      m_pixelsCoordinates_p=new PIXEL_XY[totalPixels]; //coordinates
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
+
   int pxTotal=0;
   while(true)
   {
@@ -1006,9 +268,9 @@ int PeakMatrix::loadPixelsCoordinates(char *fileName, int totalPixels)
   return pxTotal;
 }
 
-//establece la cantidad de píxeles en cada muestra a partir de info en _pixelsCoord.bin
-//resultado en el vector m_pixelsSample[]
-//retorna la cantidad de muestras o -1 si fallo
+//sets the number of pixels per sample based on info in _pixelsCoord.bin
+//result stored in vector m_pixelsSample[]
+//returns the number of samples, or -1 on failure
 int PeakMatrix::getSamplesPixelNumber()
 {
   std::fstream fp;
@@ -1035,7 +297,7 @@ int PeakMatrix::getSamplesPixelNumber()
     fp.seekg((std::streampos)(nSamplePixels*sizeof(PIXEL_XY)), std::ios_base::cur);
     if(fp.fail() || fp.bad()) //fault control
       {
-        char txt[200];
+        char txt[250];
         sprintf(txt, "Error: %s file could not be read completely.", fileName);
         throw std::runtime_error(txt);
         hit =false; break;
@@ -1046,5 +308,650 @@ int PeakMatrix::getSamplesPixelNumber()
   fp.close();
   if(!hit) return -1;
   return nSamples;
+}
+
+
+//getCentroids()
+
+//Based on the Gaussians, the centroids within a mass segment are determined.
+//1) A histogram is generated based on Gaussian centers and added uncertainty. 
+// It serves to delineate regions of interest for subsequent parallel processing. Noise matters.
+//2)Each mass segment is treated separately.
+// a)An ordered vector containing the Gaussian centers of all pixels is created.
+// b)Iterative averaging, constrained by a tolerance threshold, is used to generate a proposal for centroids.
+// c)This estimate is used as the initialization centroid for the k-means algorithm.
+//   The dataset consists of the centers of Gaussians centered on the initialization value and delimited by the tolerance.
+// d)An intensity value is associated with each centroid for every pixel. 
+//   A pixel contributes the maximum value from the Gaussian nearest to the centroid, provided it falls within the tolerance. 
+//   If a pixel contributes to more than one Gaussian, either the maximum value or the mean value is extracted, depending on the `intMethod` argument.
+//   A representative intensity value is also generated for the centroid. It is the average or maximum value, depending on the intMethod parameter.
+//The centroid information is saved in a file with a name ending in _peakMatrix_n.bin, where n is the thread number.
+//These files are destroyed upon completion, after all the information has been consolidated into a new file (_peakMatrix.bin).
+int PeakMatrix::getCentroids()
+{
+  Common tools;
+
+  m_deltaMass=m_tolerance*m_mzLow/(10*1e6); //delta=1/4 of the minimum mass increment of the spectrometer
+  m_massAxisSize=1+(m_mzHigh-m_mzLow)/m_deltaMass;
+  try{
+      m_massAxis_p= new double[m_massAxisSize];
+      m_spectro.SNR_p=new double[m_massAxisSize];
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
+  
+  //First parallel stage: the mass axis is generated via addition based on Gaussian centers. Oversampling = 10.
+  //Each center of mass has an associated uncertainty equal to half the tolerance.
+  ///////////////////////////////////////////////////////////////////////////////
+  
+  setWorkThr(m_massAxisSize); //Task distribution for the threads (equal number of elements).
+  try{  
+      for(int i=0; i<m_nThreads; i++)
+        m_thread_p[i]=new std::thread(&PeakMatrix::mtMassAxis, this, i);
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
+  
+  //wait until the conclusion-
+  for(int i=0; i<m_nThreads; i++)
+  {
+    m_thread_p[i]->join();
+    delete m_thread_p[i]; m_thread_p[i]=0;
+  }
+
+  //Noise is estimated and isolated segments are detected for subsequent parallel processing.
+  //////////////////////////////////////////////////////////////////////////////////////////
+
+  m_spectro.int_p=m_massAxis_p;
+  m_spectro.size=m_massAxisSize;
+  
+  NoiseEstimation noiseEst_p(2, 1, 9); //sd
+  m_noise=noiseEst_p.getSNR(m_spectro.int_p, m_spectro.size, m_spectro.SNR_p);
+  m_spectro.noise=m_noise;
+
+  //the occupied mass segments (delimited by noise) are determined.
+  bool state=0;
+  int count=0;
+  //required memory
+  for(int i=0; i<m_massAxisSize; i++)
+  {
+    if(state==0 && m_massAxis_p[i]>=m_noise) {state=1;}
+    else if(state==1 && m_massAxis_p[i]<m_noise) {state=0; count++;}
+  }
+  if(state==1) count++; //el último 
+  try{
+      m_MR_p=new MASS_RANGE[count+1];
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
+  
+  state=0;
+  count=0;
+
+  for(int i=0; i<m_massAxisSize; i++)
+  {
+    if     (state==0 && m_massAxis_p[i]>=m_noise) {state=1; m_MR_p[count].low=i;}
+    else if(state==1 && m_massAxis_p[i]<m_noise)  {state=0; m_MR_p[count++].high=i;}
+  }
+  
+  if(state==1) m_MR_p[count++].high=m_massAxisSize-1; //the last 
+  m_MRsize=count;
+//  printf("segments:%d noise:%.2f\n", count, m_noise);  
+ 
+  //Second parallel stage: peaks are detected and centroids are estimated.
+  //Each thread generates a file containing its own results (fileName_peakMatrix_n, where n=thread).
+  /////////////////////////////////////////////////////////////////////////////////////////////////
+  
+  setWorkThr(m_MRsize); //Task distribution for the threads (same number of segments).
+  try{  
+      for(int i=0; i<m_nThreads; i++)
+        m_thread_p[i]=new std::thread(&PeakMatrix::mtSegments, this, i);
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return 0;
+  }
+  //Progress information for the user.
+  float status=0, vez=1;
+  while(status<0.9)
+  {
+    status=0;
+    for(int i=0; i<m_nThreads; i++)
+    {
+      status+=m_status[i];
+    }
+    status/=m_nThreads;
+    if(status>vez*0.1) {if(vez<10) printf("%.0f ", vez*10); vez+=1.0;}
+  }
+ 
+    //wait until the conclusion-
+  for(int i=0; i<m_nThreads; i++)
+  {
+    m_thread_p[i]->join();
+    delete m_thread_p[i]; m_thread_p[i]=0;
+  }
+
+
+ //The information from each threads file is consolidated into a single file.
+ ///////////////////////////////////////////////////////////////////////////
+
+char file[250];
+sprintf(file,"%s_peakMatrix.bin", m_baseDir);
+std::fstream fpOut, fpIn;
+fpOut.open(file, std::fstream::out | std::ios::binary | std::ios::trunc);
+if(!fpOut.is_open())
+{
+  char txt[200];
+  sprintf(txt, "Error: The internal %s file could not be created.\n The peak matrix cannot be saved.\n", file);
+  throw std::runtime_error(txt);
+}
+
+std::streampos initPos, finalPos;
+std::streampos ionPos, colSize, offset;
+int totalSamples, totalPx, totalIons=0, nIonsThr;
+Common common;
+int pxSample[MAX_SAMPLES];
+
+//Each thread generates a file containing partial centroids. Here, they are aggregated into a single file.
+for(int thrIdx=0; thrIdx<m_nThreads; thrIdx++)
+  {
+  sprintf(file,"%s_peakMatrix_%d.bin", m_baseDir, thrIdx);
+  fpIn.open(file, std::fstream::in | std::ios::binary);
+    if(!fpIn.is_open())
+    {
+      char txt[300];
+      sprintf(txt, "Error: The internal %s file could not be created.\n The peak matrix cannot be saved.\n", file);
+      throw std::runtime_error(txt);
+    }
+    //info común (read)
+      //metadata
+      fpIn.read((char*)&totalSamples, sizeof(int)); //samples number
+      fpIn.read((char*)&totalPx,      sizeof(int)); //total pixels in all samples
+      fpIn.read((char*)&nIonsThr,    sizeof(int)); //ions number
+      if(fpIn.fail()) 
+        {
+        printf("Error while reading in %s", file);
+        fpIn.close(); return 0;
+        }
+      fpIn.read((char*)pxSample,  totalSamples*sizeof(int)); //px in each sample
+      
+      //info común (write)
+    if(thrIdx==0)
+      {
+      fpOut.write((char*)&totalSamples, sizeof(int)); //samples number
+      fpOut.write((char*)&totalPx,      sizeof(int)); //total pixels in all samples
+      fpOut.write((char*)&nIonsThr,    sizeof(int)); //ions number
+      if(fpOut.fail()) 
+        {
+        printf("Error while writing in %s", file);
+        fpOut.close(); return 0;
+        }
+      fpOut.write((char*)pxSample,  totalSamples*sizeof(int)); //px in each sample
+      }
+    totalIons+=nIonsThr;
+    
+    //The data on disk is organized by centroids.
+    //Each centroid is accompanied by a list of pixels from all samples in pixel-intensity format.
+    //To separate them, the pixel range associated with each sample must be known.    
+    //The minimum and maximum pixels in each sample are delimited.
+    PIXEL_XY samplesPxLimit[totalSamples]; //x -> low; y -> high
+    samplesPxLimit[0].x=0;
+    samplesPxLimit[0].y=pxSample[0]-1;
+    for(int i=1; i<totalSamples; i++)
+    {
+      samplesPxLimit[i].x=samplesPxLimit[i-1].y+1;
+      samplesPxLimit[i].y=samplesPxLimit[i].x+pxSample[i]-1;
+    }
+    //The information is copied to the peak matrix file.
+    double tmpMass, tmpIntensity, tmpTolerance;
+    int tmpPx, nPx;
+    
+    for(int ion=0; ion<nIonsThr; ion++) //para cada centroide
+    {
+      //Info on this centroid.
+      fpIn.read((char*)&tmpMass, sizeof(double));
+      fpIn.read((char*)&tmpIntensity, sizeof(double));
+      fpIn.read((char*)&tmpTolerance, sizeof(double));
+      fpIn.read((char*)&nPx, sizeof(int));
+      if(fpIn.fail()) 
+      {
+        printf("Error while reading in %s", file);
+        fpIn.close(); return 0;
+      }
+
+    //Copy the centroid to the destination file. 
+    fpOut.write((char*)&tmpMass, sizeof(double));
+    fpOut.write((char*)&tmpIntensity, sizeof(double));
+    fpOut.write((char*)&tmpTolerance, sizeof(double));
+    fpOut.write((char*)&nPx, sizeof(int));
+    if(fpOut.fail()) 
+    {
+      printf("Error while writing in %s", file);
+      fpOut.close(); return 0;
+    }
+    
+    //pixels and their intensities.
+    for(int i=0; i< nPx; i++)
+    {
+        fpIn.read((char*)&tmpPx, sizeof(int));
+        fpIn.read((char*)&tmpIntensity, sizeof(double));
+        if(fpIn.fail()) 
+        {
+          printf("Error while reading in %s", file);
+          fpIn.close(); return 0;
+        }
+      fpOut.write((char*)&tmpPx, sizeof(int));
+      fpOut.write((char*)&tmpIntensity, sizeof(double));
+      if(fpOut.fail()) 
+      {
+        printf("Error while reading in %s", file);
+        fpOut.close(); return 0;
+      }
+    }
+  }
+
+    fpIn.close();
+    sprintf(file,"rm %s_peakMatrix_%d.bin", m_baseDir, thrIdx);
+    
+    system(file); //The thread's temporary files are deleted.
+  }
+fpOut.seekg((std::streampos)(2*sizeof(int)), std::ios_base::beg);
+fpOut.write((char*)&totalIons, sizeof(int));
+
+fpOut.close();
+
+
+printf("100\n");
+printf("\t\t\ttotal centroids:%d\n", totalIons);
+return totalIons; 
+}
+
+
+//Parallel operation. 
+//1) A vector is generated with spacing equal to one-tenth of the tolerance set for the lowest mass. 
+//2) One unit is accumulated in each cell for every Gaussian distribution coinciding with that mass interval, 
+//assuming a unified standard deviation equal to half the tolerance for the mass in question.
+//It serves to delineate regions of interest for subsequent parallel processing. Noise matters.
+void PeakMatrix::mtMassAxis(int thrIdx)
+{
+  double tolerance=m_tolerance, deltaMass=m_deltaMass, mzLow=m_mzLow, mzHigh=m_mzHigh;
+  double maxMass, sigma, deltaMass2, lowMass, highMass;
+  int iLow, iHigh, massAxisSize=m_massAxisSize;
+  
+  int lowSegIdx =round(m_MRthr_p[thrIdx].low); 
+  int highSegIdx=round(m_MRthr_p[thrIdx].high); 
+  if(highSegIdx<lowSegIdx) return;
+  double lowSegMass =mzLow+lowSegIdx *deltaMass; //extreme masses for the thread
+  double highSegMass=mzLow+highSegIdx*deltaMass;
+  double *massAxis_p=m_massAxis_p;
+
+  for(int i=lowSegIdx; i<=highSegIdx; i++) {massAxis_p[i]=0;} //init
+  
+  //for all elements of the spectrum
+  for(int px=0; px<m_totalPixels; px++)
+  {
+    if(m_gaussians_p[px].gauss_p==0 || m_gaussians_p[px].size==0) {continue;} //if this entry does not contain info.
+    
+    for(int i=0; i<m_gaussians_p[px].size; i++) 
+    {
+      maxMass=m_gaussians_p[px].gauss_p[i].mean; //gaussian central mass
+      
+      //Some ions may be zero in mean/sigma/weight. They are discarded.
+      if(maxMass<mzLow || maxMass>mzHigh) 
+        continue;
+      deltaMass2=tolerance*maxMass/1e6;
+      sigma=deltaMass2/2.0;
+      //sigma=m_gaussians_p[px].gauss_p[i].sigma;
+
+      //Very wide Gaussians (sigma>5*deltaMass) are discarded.
+      if(fabs(m_gaussians_p[px].gauss_p[i].sigma)>5*deltaMass2) //sigma >>
+        continue;
+      
+      //vector points occupied by the peak.
+      lowMass =maxMass-sigma;
+      highMass=maxMass+sigma;
+      if(lowMass<lowSegMass || highMass>highSegMass) continue;
+      iLow =(lowMass -mzLow)/deltaMass;
+      iHigh=(highMass-mzLow)/deltaMass;
+      for(int j=iLow; j<=iHigh && j<massAxisSize; j++) 
+        massAxis_p[j]+=1.0;
+    }
+  }
+}
+
+
+//It establishes the task distribution lineal for each thread.
+//Each thread receives indices for the start and end segments.
+/////////////////////////////////////////////////////////////
+void PeakMatrix::setWorkThr(int vectorSize)
+{
+  int nSegThr=vectorSize/m_nThreads;
+  if(nSegThr==0) //vectorSize<m_nThreads => A single thread bears the entire load.
+    {
+    m_MRthr_p[0].low=0;  //integer over double
+    m_MRthr_p[0].high=vectorSize-1;
+    for( int i=1; i<m_nThreads; i++) //The remaining threads are cancelled.
+      {
+      m_MRthr_p[i].low=1;  
+      m_MRthr_p[i].high=0; //high<low
+      }
+    }
+  else //one or more segments per thread
+    {
+    for(int i=0; i<m_nThreads-1; i++)
+      {
+      m_MRthr_p[i].low=i*nSegThr;  //integer over double
+      m_MRthr_p[i].high=(i+1)*nSegThr-1;
+      }
+    m_MRthr_p[m_nThreads-1].low=(m_nThreads-1)*nSegThr;
+    m_MRthr_p[m_nThreads-1].high=vectorSize-1;
+    }
+}
+
+
+//Parallel execution. Each mass segment is treated separately.
+//Based on the Gaussians, the centroids within a mass segment are determined.
+// a)An ordered vector containing the Gaussian centers of all pixels is created.
+// b)Iterative averaging, constrained by a tolerance threshold, is used to generate a proposal for centroids.
+// c)This estimate is used as the initialization centroid for the k-means algorithm.
+//   The dataset consists of the centers of Gaussians centered on the initialization value and delimited by the tolerance.
+// d)An intensity value is associated with each centroid for every pixel. 
+//   A pixel contributes the maximum value from the Gaussian nearest to the centroid, provided it falls within the tolerance. 
+//   If a pixel contributes to more than one Gaussian, either the maximum value or the mean value is extracted, depending on the `intMethod` argument.
+//   A representative intensity value is also generated for the centroid. It is the average or maximum value, depending on the intMethod parameter.
+//The centroid information is saved in a file with a name ending in _peakMatrix_n.bin, where n is the thread number.
+void PeakMatrix::mtSegments(int thrIdx)
+{
+  Common tools;
+  double tolerance=m_tolerance;
+  int lowSegIdx =round(m_MRthr_p[thrIdx].low); 
+  int highSegIdx=round(m_MRthr_p[thrIdx].high);
+  if(highSegIdx<lowSegIdx) return;
+  
+  int lowMassAxisIdx =round(m_MR_p[lowSegIdx].low);
+  int highMassAxisIdx=round(m_MR_p[highSegIdx].high);
+  int segSize=highMassAxisIdx-lowMassAxisIdx+1;
+  
+  double localDeltaMass=m_deltaMass;
+  double mzLow =m_mzLow+lowMassAxisIdx *localDeltaMass;
+  double mzHigh=m_mzLow+highMassAxisIdx*localDeltaMass;
+
+  //determines the number of Gaussians in the interval for subsequent memory allocation.
+  int gCount=0;
+  for(int i=0; i<m_totalPixels; i++)
+  {
+    if(m_gaussians_p[i].gauss_p && m_gaussians_p[i].size>0)
+    {
+      int idxLow =tools.nearestIndexGaussians(mzLow,  m_gaussians_p[i].gauss_p, m_gaussians_p[i].size);
+      int idxHigh=tools.nearestIndexGaussians(mzHigh, m_gaussians_p[i].gauss_p, m_gaussians_p[i].size);
+      gCount+=idxHigh-idxLow+1;
+    }
+  }
+  //memory allocation for the centers of the Gaussians.
+  double *tmpMassAxis_p=0, *massAxis_p=0;
+  int    *tmpMassAxisIdx_p=0;
+  try{
+      tmpMassAxis_p   =new double[gCount];
+      massAxis_p      =new double[gCount];
+      tmpMassAxisIdx_p=new int[gCount];
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return;
+  }
+  
+  gCount=0;
+  //storage of the Gaussian centers
+  for(int i=0; i<m_totalPixels; i++)
+  {
+    if(m_gaussians_p[i].gauss_p && m_gaussians_p[i].size>0)
+    {
+      int idxLow =tools.nearestIndexGaussians(mzLow,  m_gaussians_p[i].gauss_p, m_gaussians_p[i].size);
+      int idxHigh=tools.nearestIndexGaussians(mzHigh, m_gaussians_p[i].gauss_p, m_gaussians_p[i].size);
+      for(int j=idxLow; j<=idxHigh; j++)
+      {
+        tmpMassAxis_p[gCount]=m_gaussians_p[i].gauss_p[j].mean;
+          gCount++;
+      }
+    }
+  }
+  //ascending order
+  //massAxis_p stores the sorted central masses of the Gaussians for all pixels.
+  tools.sortUp(tmpMassAxis_p, tmpMassAxisIdx_p, gCount); 
+
+  for(int i=0; i<gCount; i++)
+    massAxis_p[i]=tmpMassAxis_p[tmpMassAxisIdx_p[i]];
+  int massAxisSize=gCount;
+
+  if(tmpMassAxisIdx_p)delete [] tmpMassAxisIdx_p;
+
+  //centroid estimation by iterative averaging.
+  /////////////////////////////////////////////
+  double *centers_p=0;
+  int *centersSize_p=0;
+  try{
+      centers_p=new double[massAxisSize];
+      centersSize_p=new int[massAxisSize];
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return;
+  }
+  
+  for(int i=0; i<massAxisSize; i++) centersSize_p[i]=0;
+  
+  int idxLow =tools.nearestIndex(mzLow,  massAxis_p, massAxisSize); //lower mass index
+  int idxHigh=tools.nearestIndex(mzHigh, massAxis_p, massAxisSize);
+  int nIons=0;
+  centers_p[nIons]=massAxis_p[idxLow];
+  double segmentSize=centers_p[nIons]*tolerance/1e6;
+  double massDiff;
+
+  centersSize_p[0]=1;
+  for(int i=idxLow+1; i<=idxHigh; i++)//iterative averaging over the interval, taking tolerance into account.
+  {
+    massDiff=fabs(massAxis_p[i]-centers_p[nIons]);
+    if(massDiff<segmentSize) //within tolerance
+      {
+      centers_p[nIons]=(1.0/((double)centersSize_p[nIons]+1.0))*((double)centersSize_p[nIons]*centers_p[nIons]+massAxis_p[i]);
+      centersSize_p[nIons]++; //Number of elements in the bin.
+      }
+    // new ion if the pixels provide sufficient support.
+    else //out of tolerance
+      {
+      if(centersSize_p[nIons]>=m_pxSupport) nIons++; //new ion (Initial approach to offloading work.)
+      
+      centers_p[nIons]=massAxis_p[i]; //ion fail
+      centersSize_p[nIons]=1;
+      segmentSize=massAxis_p[i]*tolerance/1e6;
+      }
+  }
+  //The possible final peak is coming to an end.
+  if(massDiff<segmentSize && centersSize_p[nIons]>=m_pxSupport) 
+    nIons++;  
+
+  
+  //k-means Clustering
+  int clusterSize;
+  int maxIter=40; //maximum iterations
+  double convergenceValue=1e-6;
+  double mass, deltaMass, lowMass, highMass;
+  int lowMassIdx, highMassIdx;
+  try{
+      m_centroids_p[thrIdx].gauss_p=new GAUSS_PARAMS[nIons];
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return;
+  }
+  
+  for(int i=0; i<nIons; i++)
+  {
+    //The set of participating central masses is determined.
+    mass=centers_p[i];
+    deltaMass=tolerance*mass/1e6;
+    lowMass =mass-deltaMass/2;
+    highMass=mass+deltaMass/2;
+    lowMassIdx =tools.nearestIndex(lowMass,  massAxis_p, massAxisSize);
+    highMassIdx=tools.nearestIndex(highMass, massAxis_p, massAxisSize);
+    clusterSize=0;
+    for(int j=lowMassIdx; j<=highMassIdx; j++)
+      tmpMassAxis_p[clusterSize++]=massAxis_p[j]; 
+    
+    KmeansR kmeans(tmpMassAxis_p, clusterSize, 1, maxIter, convergenceValue); //k-means constructor
+    kmeans.getClusters(1, &mass); 
+    
+    //results
+    m_centroids_p[thrIdx].gauss_p[i].mean=kmeans.m_kStruct.clusters_p[0].center;
+    m_centroids_p[thrIdx].gauss_p[i].sigma=sqrt(kmeans.m_kStruct.clusters_p[0].withinss);
+    m_centroids_p[thrIdx].gauss_p[i].weight=1;
+
+  }
+  m_centroids_p[thrIdx].size=nIons;
+  
+  if(tmpMassAxis_p)   delete [] tmpMassAxis_p;
+  if(centers_p)       delete [] centers_p;
+  /////////////////////////////////////////7
+
+  //info to file
+  std::fstream fp;
+  char fileName[200];
+  sprintf(fileName,"%s_peakMatrix_%d.bin", m_baseDir, thrIdx);
+  fp.open(fileName, std::fstream::out | std::ios::binary | std::ios::trunc);
+  if(!fp.is_open())
+  {
+    char txt[300];
+    sprintf(txt, "Error: The internal file %s could not be created.\n The peak matrix cannot be saved.\n", fileName);
+    throw std::runtime_error(txt);
+  }
+  std::streampos initPos, finalPos;
+  
+  fp.write((char*)&m_nSamples, sizeof(int)); //samples number
+  fp.write((char*)&m_totalPixels, sizeof(int)); //space for matrix rows
+  initPos=fp.tellg();
+  fp.write((char*)&m_nCentroids, sizeof(int)); //space for matrix cols
+  for(int i=0; i<m_nSamples; i++)
+    fp.write((char*)&m_pxSamples_p[i], sizeof(int)); //space for pixel number into each sample
+  
+  double dispersion, max;
+  int pxCount, peakCount=0;
+  int *nPx_p=0;
+  try{
+      nPx_p=new int[m_totalPixels];
+      }
+  catch(const std::bad_alloc& e)
+  {
+    printf("Error reserving memory: %s\n",e.what());
+    return;
+  }
+  
+  int vez=1;
+  double maxMass, sigma;
+  m_status[thrIdx]=1; //avoids problems in case nIons=0
+
+  //management of intensities and dispersion
+  for(int i=0; i<nIons; i++)
+  {
+    pxCount=0;
+    dispersion=0;
+    max=m_centroids_p[thrIdx].gauss_p[i].mean;    
+    double intensity, maxInt=0, meanInt=0;
+    double tmpTolerance=max*m_tolerance/1e6;
+    
+    for(int px=0; px<m_totalPixels; px++)
+    {
+      if(m_gaussians_p[px].gauss_p==0 || m_gaussians_p[px].size==0) {continue;} //if this entry does not contain info.
+      //Some ions may be zero in mean/sigma/weight. They are discarded.
+      
+      int gIdx=tools.nearestIndexGaussians(max, m_gaussians_p[px].gauss_p, m_gaussians_p[px].size);
+      maxMass=m_gaussians_p[px].gauss_p[gIdx].mean;
+      double averageValue=0, maxValue=0;
+      
+      //mass range for this pixel within tolerance.
+      int idxLow=gIdx, idxHigh=gIdx;
+      if(gIdx>0)  //limits control
+        for(idxLow=gIdx-1; idxLow>=0; idxLow--)
+        {
+          if(fabs(m_gaussians_p[px].gauss_p[idxLow].mean-maxMass)>tmpTolerance) 
+              {idxLow ++; break;}
+        }
+      if(gIdx<m_gaussians_p[px].size-1) //limits control
+        for(idxHigh=gIdx+1; idxHigh<m_gaussians_p[px].size; idxHigh++)
+        {
+          if(fabs(m_gaussians_p[px].gauss_p[idxHigh].mean-maxMass)>tmpTolerance) 
+              {idxHigh--; break;}
+       }
+      //valid indices
+      for(int idx=idxLow; idx<=idxHigh; idx++)
+      {
+        double value=m_gaussians_p[px].gauss_p[idx].weight;
+        averageValue+=value;
+        if(value>maxValue) maxValue=value;
+      }
+      if(idxHigh>=idxLow)
+        averageValue/=(idxHigh-idxLow+1.0);
+      else   averageValue=0;
+      
+      if(maxMass<m_mzLow || maxMass>m_mzHigh) {continue;}
+      //sigma=maxMass*tolerance/2e6; //SD from mass
+      sigma=m_gaussians_p[px].gauss_p[gIdx].sigma; //SD from gaussians
+      if(fabs(max-maxMass)<=3*sigma)
+      {
+        if(m_intMethod==MAX) //max value
+          intensity=maxValue;
+        else{
+          intensity=averageValue; //mean value
+          meanInt+=intensity;
+        }
+        massAxis_p[pxCount]=intensity; //Note: memory is reused.
+        if(intensity>maxInt) maxInt=intensity;
+        dispersion+=(max-maxMass)*(max-maxMass);
+        nPx_p[pxCount]=px;
+        pxCount++;
+      }
+    }
+    if(pxCount>=m_pxSupport) //ions that are sufficiently supported.
+    {
+      peakCount++;
+      //centroid header in the file
+      dispersion=sqrt(dispersion/pxCount);
+      meanInt/=pxCount;
+      fp.write((char*)&max, sizeof(double)); //centroid mass
+      if(m_intMethod==MAX)
+        fp.write((char*)&maxInt, sizeof(double));      //centroid intensity
+      else
+        fp.write((char*)&meanInt, sizeof(double));      //centroid intensity
+      double centroidTolerance=1e6*dispersion/max;  
+      fp.write((char*)&centroidTolerance, sizeof(double)); //centroid tolerance (ppm)
+      fp.write((char*)&pxCount, sizeof(int));         //px number support
+      
+      //pixel-intensity pairs
+      for(int i=0; i<pxCount; i++)
+      {
+        fp.write((char*)&nPx_p[i], sizeof(int)); //px 
+        fp.write((char*)&massAxis_p[i], sizeof(double)); //px intensity
+      }
+    }
+    m_status[thrIdx]=(i+1.0)/(float)nIons; //para el observador: evolución de tareas
+  }
+  fp.seekg(initPos, std::ios_base::beg);
+  fp.write((char*)&peakCount, sizeof(int)); //update nIons
+  
+  fp.close();
+  if(nPx_p)           delete [] nPx_p;
+  if(massAxis_p)      delete [] massAxis_p;
 }
 

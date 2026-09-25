@@ -48,31 +48,14 @@ public:
   RawToGaussians(char *baseDir, const char* ibdFname, Rcpp::List imzML, Rcpp::List params,  Rcpp::NumericVector pxList, 
                  double mzLow=0, double mzHigh=0, int nThreads=0);
   
-  // Saves the Gaussian data to the given file
-  // Adds it to any existing data
-  // Returns false if failed 
-  int saveGaussians(char *fileName, GAUSS_SP *gauss_p);
-  
-  //Save the coordinate (XY) information of each pixel of m_pxList[] to the fileName file.
-  //It is added to any existing data.
-  //returns false if it failed.
-  bool savePixelsCoordinates(char *fileName, NumericVector X, NumericVector Y);
-    
     //destructor
   //free reserved memory
   ~RawToGaussians();
   
-  //freeing buffer.
-  void freeMemoryPeak();
-  
-  //mtGetGaussians()
-  //Parallel processing.
-  //Peak are delimited and their Gaussians are formed.
-  //This thread remains active, processing spectra until none remain.
-  //Each spectrum is converted into Gaussians that can overlap (join).
-  //spIndex: thread
-  //Returns -1 on failure, 0 = OK.
-  int  mtGetGaussians(int spIndex);
+  // Saves the Gaussian data to the given file
+  // Adds it to any existing data
+  // Returns false if failed 
+  int saveGaussians(char *fileName, GAUSS_SP *gauss_p);
   
   //rawToGaussians
   //gets the intensity peak and converts them into Gaussians.
@@ -95,11 +78,16 @@ public:
   //Returns a list with two arrays: averageMz and averageIntensity.
   List getMeanSpectrum(double resolution, int overSampling);
   
-  GAUSS_SP *getGaussiansPointer();
-  int getPixelsNumber();
-  NumericMatrix getPixelGaussians(int px, double mzLow, double mzHigh);
-  
+
 private:  
+  //freeing buffer.
+  void freeMemoryPeak();
+  
+  //Save the coordinate (XY) information of each pixel of m_pxList[] to the fileName file.
+  //It is added to any existing data.
+  //returns false if it failed.
+  bool savePixelsCoordinates(char *fileName, NumericVector X, NumericVector Y);
+  
   //getGaussians()
   //Called from a thread.
   //Sets the Gaussians on the peak.
@@ -118,44 +106,49 @@ private:
   //Returns the size of the spectrum.
   int getRawInfo(int px, int spIndex);
   
+  //mtGetGaussians()
+  //Parallel processing.
+  //Peak are delimited and their Gaussians are formed.
+  //This thread remains active, processing spectra until none remain.
+  //Each spectrum is converted into Gaussians that can overlap (join).
+  //spIndex: thread
+  //Returns -1 on failure, 0 = OK.
+  int  mtGetGaussians(int spIndex);
+  
+
 public:   
   int     
-  m_maxPxGaussians,
-  m_massRangeSize,
-  m_NPixels;
-  double     
-    m_massResolution;
-  bool     m_hit;
-  GAUSS_SP      *m_gaussians_p;
-  
+        m_maxPxGaussians,
+        m_massRangeSize,
+        m_NPixels;
+  bool  m_hit;
+  GAUSS_SP  *m_gaussians_p;
+
 private:  
   //input info to the constructor.
-  bool m_continuous;
+  bool  m_continuous;
   int 
-    m_nThreads,
-    m_pxSupport,
-    m_maxMzLength,
-    *m_pxList,
-    m_pxMax,
-    m_pxMin;
-    double     
-    m_mzLow,
-    m_mzHigh,
-    m_SNR;
+        m_nThreads,
+        m_pxSupport,
+        m_maxMzLength,
+        *m_pxList,
+        m_pxMax,
+        m_pxMin;
   double     
-    m_maxMassResolution;  
-  
+        m_mzLow,
+        m_mzHigh,
+        m_SNR;
+
   //info generated in the class.
   GetImzMLData  *m_getImzMLData_p;
   PEAK_F_GROUP  *m_peakFG_p=0;
   
   MASS_SEGMENT  m_massSegment;
-  SPECTRO  m_spectro[MAX_THREADS];
+  SPECTRO       m_spectro[MAX_THREADS];
   bool          m_enable;
   int           m_SNRmethod;
   NoiseEstimation *m_noiseEst_p; 
-  double *Z;
-  PeakMethod         m_peakMethod;
+  PeakMethod    m_peakMethod;
 }; 
 
 #endif

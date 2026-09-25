@@ -41,13 +41,21 @@ int Cgmm::gmm(GMM_STRUCT *gmm)
 
     //memory reservation and initialization
     double *sumaPxp_p=0;
-    sumaPxp_p=new double[gmm->size];
-    for(int g=0; g<gmm->nGauss; g++)
-        {
-        pxk_p[g]=0;
-        pxk_p[g]=new double[gmm->size];
-        gmm->status[g]=0;
+    try{
+        sumaPxp_p=new double[gmm->size];
+        for(int g=0; g<gmm->nGauss; g++)
+            {
+            pxk_p[g]=0;
+            pxk_p[g]=new double[gmm->size];
+            gmm->status[g]=0;
+            }
         }
+    catch(const std::bad_alloc& e)
+    {
+      printf("Error reserving memory: %s\n",e.what());
+      return 0;
+    }
+    
     double sumaYsqr=0;
     int countY=0, valIndex;
     for(int iy=0; iy<gmm->size; iy++) //accumulated in magnitude
