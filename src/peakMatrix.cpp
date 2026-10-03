@@ -331,7 +331,7 @@ int PeakMatrix::getCentroids()
 {
   Common tools;
 
-  m_deltaMass=m_tolerance*m_mzLow/(10*1e6); //delta=1/4 of the minimum mass increment of the spectrometer
+  m_deltaMass=m_tolerance*m_mzLow/(10*1e6); //delta=1/10 of the minimum mass increment of the spectrometer
   m_massAxisSize=1+(m_mzHigh-m_mzLow)/m_deltaMass;
   try{
       m_massAxis_p= new double[m_massAxisSize];
@@ -674,12 +674,12 @@ void PeakMatrix::mtSegments(int thrIdx)
 {
   Common tools;
   double tolerance=m_tolerance;
-  int lowSegIdx =round(m_MRthr_p[thrIdx].low); 
-  int highSegIdx=round(m_MRthr_p[thrIdx].high);
+  int lowSegIdx =round(m_MRthr_p[thrIdx].low); // low segment into thread
+  int highSegIdx=round(m_MRthr_p[thrIdx].high);//high segment into thread
   if(highSegIdx<lowSegIdx) return;
   
-  int lowMassAxisIdx =round(m_MR_p[lowSegIdx].low);
-  int highMassAxisIdx=round(m_MR_p[highSegIdx].high);
+  int lowMassAxisIdx =round(m_MR_p[lowSegIdx].low);  // low idx in low  segment
+  int highMassAxisIdx=round(m_MR_p[highSegIdx].high);//high idx in high segment
   int segSize=highMassAxisIdx-lowMassAxisIdx+1;
   
   double localDeltaMass=m_deltaMass;
@@ -880,6 +880,7 @@ void PeakMatrix::mtSegments(int thrIdx)
       maxMass=m_gaussians_p[px].gauss_p[gIdx].mean;
       double averageValue=0, maxValue=0;
       
+      
       //mass range for this pixel within tolerance.
       int idxLow=gIdx, idxHigh=gIdx;
       if(gIdx>0)  //limits control
@@ -918,7 +919,7 @@ void PeakMatrix::mtSegments(int thrIdx)
         }
         massAxis_p[pxCount]=intensity; //Note: memory is reused.
         if(intensity>maxInt) maxInt=intensity;
-        dispersion+=(max-maxMass)*(max-maxMass);
+        dispersion+=(max-maxMass)*(max-maxMass); //max=centroid; maxMass=peak
         nPx_p[pxCount]=px;
         pxCount++;
       }
@@ -934,7 +935,10 @@ void PeakMatrix::mtSegments(int thrIdx)
         fp.write((char*)&maxInt, sizeof(double));      //centroid intensity
       else
         fp.write((char*)&meanInt, sizeof(double));      //centroid intensity
-      double centroidTolerance=1e6*dispersion/max;  
+      
+      double centroidTolerance=1e6*dispersion/max;
+      if(centroidTolerance>tolerance) centroidTolerance=-1; //tims-TOF, for example
+      
       fp.write((char*)&centroidTolerance, sizeof(double)); //centroid tolerance (ppm)
       fp.write((char*)&pxCount, sizeof(int));         //px number support
       

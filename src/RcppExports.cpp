@@ -400,6 +400,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rEstimateTolerance
+NumericMatrix rEstimateTolerance(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, int nThreads);
+RcppExport SEXP _iCone_rEstimateTolerance(SEXP ibdFnameSEXP, SEXP imzMLSEXP, SEXP paramsSEXP, SEXP nThreadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type ibdFname(ibdFnameSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type imzML(imzMLSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< int >::type nThreads(nThreadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(rEstimateTolerance(ibdFname, imzML, params, nThreads));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_iCone_rGetGaussiansFromSpectrum", (DL_FUNC) &_iCone_rGetGaussiansFromSpectrum, 5},
@@ -430,6 +444,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_iCone_rGetBasic", (DL_FUNC) &_iCone_rGetBasic, 1},
     {"_iCone_rGetCentroid", (DL_FUNC) &_iCone_rGetCentroid, 4},
     {"_iCone_rGetMatrix", (DL_FUNC) &_iCone_rGetMatrix, 2},
+    {"_iCone_rEstimateTolerance", (DL_FUNC) &_iCone_rEstimateTolerance, 4},
     {NULL, NULL, 0}
 };
 

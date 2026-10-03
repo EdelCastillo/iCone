@@ -132,14 +132,14 @@ return a list:
         pxCoordinates: matrix with the coordinates (X/Y) of pixels.
 ```
 
->pkMatrix <- **getIntensityMatrix**(data, sampleList=1)
+>pkMatrix <- **getIntensityMatrix**(data, sampleList=0)
 
 Returns a list containing the intensity matrices associated with each sample.
 
 **Description of the parameters:**   
 ```
-                data: A list from getPeakMatriz()
-          sampleList: list of samples (numerical values)
+                data: A list from getPeakMatrix()
+          sampleList: List of samples (numerical values). By defect or zero, return all samples together
           
               return: A list of intensity matrices: row = pixels; column=centroids
 ```
@@ -238,6 +238,23 @@ Report Gaussians over each peak of the given spectrum.
            intensity: intensity associated with each mass of the raw spectrum
                  SNR: signal-to-noise ratio associated with each mass of the raw spectrum.
                noise: noise estimation
+```
+> tolerance <- **estimateTolerance**(fileName, params)
+
+Estimates the tolerance and resolution in a imzML file data.
+
+**Description of the parameters:**   
+```
+    fileName:  Absolute paths of the file. 
+      params:  (optional)
+              "SNR": signal-to-noise ratio (by defect=10)
+      "noiseMethod": method for estimating noise (by defect="estnoise_mad").
+           nThreads: number of threads for parallel processing (by default maxCores-1)
+      imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenience with really big files.
+      fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
+
+      return: a matrix with the tolerance and resolution estimate for ten mass segments.
+
 ```
 
 ### **other methods**

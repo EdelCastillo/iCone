@@ -5,12 +5,12 @@
 \alias{getIntensityMatrix}
 \title{Returns a list containing the intensity matrices associated with each sample.}
 \usage{
-getIntensityMatrix(data, sampleList = c(1))
+getIntensityMatrix(data, sampleList = c(0))
 }
 \arguments{
 \item{data}{-> a list from getPeakMatriz()}
 
-\item{sampleList->}{list of samples (numerical values).}
+\item{sampleList->}{list of samples (numerical values). By defect or zero, return all samples together}
 }
 \value{
 \if{html}{\out{<div class="sourceCode">}}\preformatted{     -> a list of intensity matrices: row = pixels; column=centroids

@@ -218,3 +218,7 @@ rGetMatrix <- function(file, sample) {
     .Call('_iCone_rGetMatrix', PACKAGE = 'iCone', file, sample)
 }
 
+rEstimateTolerance <- function(ibdFname, imzML, params, nThreads) {
+    .Call('_iCone_rEstimateTolerance', PACKAGE = 'iCone', ibdFname, imzML, params, nThreads)
+}
+

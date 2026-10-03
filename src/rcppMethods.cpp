@@ -19,6 +19,7 @@
  *********************************************************************************/
 #include "rawToGaussians.h"
 #include "peakMatrix.h"
+#include "toleranceEstimation.h"
 
 extern int  gPeakCount, gSpectra;
 
@@ -839,11 +840,57 @@ extern int  gPeakCount, gSpectra;
      printf("Error while reading in %s", file);
      fp.close(); return 0;
    }
-   if(sample<0 || sample>=totalSamples) 
+
+   if(sample>=totalSamples) 
    {
      printf("sample out of limits [%d/%d]\n", 0, totalSamples-1);
      fp.close(); return 0;
    }
+   
+   if(sample<0) //all samples
+   {
+     fp.seekg((std::streampos)(totalSamples*sizeof(int)), std::ios_base::cur);
+
+     //se copia la info a la matriz
+     double tmpMass, tmpIntensity, tmpTolerance;
+     int tmpPx, nPx;
+
+     NumericMatrix pkMat(totalPx, totalIons); //filas, columnas
+     
+     for(int ion=0; ion<totalIons; ion++) //para cada centroide
+     {
+       for(int i=0; i<totalPx; i++) //zeroing of the column
+         pkMat(i, ion)=0;
+      
+       //Info on this centroid
+       fp.read((char*)&tmpMass, sizeof(double));
+       fp.read((char*)&tmpIntensity, sizeof(double));
+       fp.read((char*)&tmpTolerance, sizeof(double));
+       fp.read((char*)&nPx, sizeof(int));
+       if(fp.fail() || nPx>totalPx ) 
+       {
+         printf("Error while reading in %s", file);
+         fp.close(); return 0;
+       }
+
+       for(int i=0; i< nPx; i++)
+       {
+         fp.read((char*)&tmpPx, sizeof(int));
+         fp.read((char*)&tmpIntensity, sizeof(double));
+         if(fp.fail()) 
+         {
+           printf("Error while reading in %s", file);
+           fp.close(); return 0;
+         }
+          pkMat(tmpPx, ion)=tmpIntensity;
+       }
+ 
+     }
+     fp.close();
+     return (pkMat);
+   }
+   
+   //only a sample
    int pxSample[totalSamples];
    fp.read((char*)pxSample,  totalSamples*sizeof(int)); //px in each sample
    
@@ -901,4 +948,13 @@ extern int  gPeakCount, gSpectra;
    return (pkMat);
  }
  
- 
+ // [[Rcpp::export]]
+NumericMatrix rEstimateTolerance(const char* ibdFname, Rcpp::List imzML, Rcpp::List params, int nThreads)
+{
+
+   ToleranceEstimation tol(ibdFname, imzML, params, nThreads);
+   if(tol.m_hit==false) return 0;
+    
+   NumericMatrix tolerance=tol.getTolerance(); //parallel processing
+   return tolerance;
+ }

@@ -50,7 +50,6 @@ int IntensityPeak::getPeakList(SPECTRO *spectro_p, double noiseFactor)
 {
   int nIntPeak=0;
   double tmpSNR=m_SNR*noiseFactor;
-  
   for(int i=0; i<spectro_p->size; i++)
    if(spectro_p->SNR_p[i]< tmpSNR) spectro_p->int_p[i]=0.0;
   

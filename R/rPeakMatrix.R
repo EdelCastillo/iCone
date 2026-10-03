@@ -936,15 +936,24 @@ getMatrix<-function(data, sample=1)
 #' @title Returns a list containing the intensity matrices associated with each sample.
 #' 
 #' @param data      -> a list from getPeakMatriz()
-#' @param sampleList-> list of samples (numerical values).
+#' @param sampleList-> list of samples (numerical values). By defect or zero, return all samples together
 #' @return          -> a list of intensity matrices: row = pixels; column=centroids
 #' @export
-getIntensityMatrix<-function(data, sampleList=c(1))
+getIntensityMatrix<-function(data, sampleList=c(0))
 {
   sample=list()
   sampleNames=list()
   for(i in 1:length(sampleList)) #list of names
-   sampleNames=c(sampleNames, paste0("sample_", i))
+  {
+    if(sampleList[i]==0)
+    {
+      sampleNames=c(sampleNames, paste0("allSamples"))
+    }
+    else
+    {
+    sampleNames=c(sampleNames, paste0("sample_", sampleList[i]))
+    }
+  }
   
   #file whit data
   z=unlist(strsplit(basename(data$dataFiles[1]), split = "\\."))[1]
@@ -954,17 +963,120 @@ getIntensityMatrix<-function(data, sampleList=c(1))
   #get intensities matrix
   for(i in 1:length(sampleList))
   {
-    if(sampleList[i]>length(data$dataFiles) || sampleList[i] <1)
+    if(sampleList[i]>length(data$dataFiles) || sampleList[i] <0)
     {
-      cat(sprintf("warning: sample out of limits [%d:%d]\n", 1, length(data$dataFiles)))
+      cat(sprintf("warning: sample out of limits [%d:%d]\n", 0, length(data$dataFiles)))
       return(0)
     }
-    sample[[i]]=rGetMatrix(file, sampleList[i]-1)
+    sample[[i]]=rGetMatrix(file, sampleList[i]-1) # to C++
   }
-  names(sample)=sampleNames;
+  names(sample)=sampleNames[];
+  
   return (sample)
 }
 
+##################################################################################3
+
+#' @name estimateTolerance
+#' @title estimates the tolerance in the imzML file data.
+#' @param fileName:  Absolute paths of the file. 
+#' @param params:  (optional)
+#'                 "SNR": signal-to-noise ratio (by defect=10)
+#'         "noiseMethod": method for estimating noise (by defect="estnoise_mad").
+#'              nThreads: number of threads for parallel processing (by default maxCores-1)
+#'         imzMLChecksum: if the binary file checksum must be verified, it can be disabled for convenience with really big files.
+#'         fixBrokenUUID: set to FALSE by default to automatically fix an uuid mismatch between the ibd and the imzML files (a warning message will be raised).
+#'
+#' @return a matrix with the tolerance estimate for ten mass segments.
+#' 
+#' @export
+estimateTolerance<-function(fileName, params)
+{
+  if(missing(fileName))
+  {
+    cat("Error: fileName parameter is required\n")
+    return(0)
+  }
+
+  if(missing(params))
+  {
+    params=list("SNR"=10, "noiseMethod"="estnoise_mad", "nThreads"=0, "imzMLChecksum"=F, "fixBrokenUUID"=F)
+  }
+  if(length(fileName)==0)
+  {
+    stop("No information is provided about the files to be processed.\n")
+  }
+  #parameters control 
+  if(!(exists("SNR", where=params)))
+  {
+    cat("warning: by default, SNR parameter will be 3.\n")
+    params=c(params, "SNR"=10)
+  }
+  if(!(exists("noiseMethod", where=params)))
+  {
+    cat("warning: by default, noiseMethod parameter will be MAD type.\n")
+    params=c(params, "noiseMethod"="estnoise_mad")
+  }
+
+  if(!(exists("nThreads", where=params)))
+    params=c(params, "nThreads"=0)
+  
+  if(!(exists("imzMLChecksum", where=params)))
+    params=c(params, "imzMLChecksum"=F)
+  
+  if(!(exists("fixBrokenUUID", where=params)))
+    params=c(params, "fixBrokenUUID"=F)
+  
+  imgData <- NULL
+  pt<-proc.time()
+  
+  fileExtension <- unlist(strsplit(basename(fileName), split = "\\."))
+  fileExtension <- as.character(fileExtension[length(fileExtension)])
+
+  nThreads=params$nThreads
+  imzMLChecksum=params$imzMLChecksum
+  fixBrokenUUID=params$fixBrokenUUID
+  
+  if(nThreads>100)
+  {
+    cat("warning: max threads are 100\n")
+    nThreads=100;
+  }
+  
+    fileExtension <- unlist(strsplit(basename(fileName), split = "\\."))
+    fileExtension <- as.character(fileExtension[length(fileExtension)])
+    cat(sprintf("\nSample file name: %s\n", fileName))
+    if( fileExtension == "imzML")
+    {
+      if(!file.exists(fileName))
+      {
+        cat("Error: file not found\n")
+        return (0)
+      }
+      
+      #capturing information from an imzML file.
+      in_img=0
+      in_img <- import_imzML(path.expand(fileName),  fun_progress = NULL, fun_text = NULL, 
+                             close_signal = NULL, verifyChecksum = imzMLChecksum, subImg_rename = NULL, 
+                             subImg_Coords = NULL, fixBrokenUUID = fixBrokenUUID)
+      
+      #binary data file name.
+      file=path.expand(file.path(in_img$data$path, paste0(in_img$data$imzML$file, ".ibd")));
+      if(!file.exists(file))
+      {
+        cat(sprintf("Error: %s file not found\n", file))
+        return (0)
+      }
+
+     tolerance=rEstimateTolerance(file, in_img$data$imzML, params, nThreads);
+     }
+
+    colnames(tolerance)<-c("lowMz", "highMz", "tolerance(ppm)", "Resolution")
+
+    pt<-proc.time() - pt
+    display_processing_time(pt, "Data processing time")
+    return (tolerance)
+}
 
 
 #//////////////////////////////////////////////////////////////
