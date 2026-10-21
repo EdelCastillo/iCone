@@ -786,7 +786,7 @@ getGaussiansFromSpectrum<-function(intensity, mass, params)
       params=c(params, "initMass"=mass[0])
     
     if(!(exists("finalMass", where=params)))
-      params=c(params, "finalMass"=mass[length[mass]])
+      params=c(params, "finalMass"=mass[length(mass)])
     
   }
   initMass=params$initMass
